@@ -27,6 +27,7 @@ export default function HomeTab({ ctx }) {
     { key: "stoploss", label: "完整停損", exp: null, done: day.trades.some((t) => t.stop_loss_set), manual: false },
     { key: "journal", label: "完成 Decision Journal", exp: 20, done: !!day.journal, manual: false },
   ];
+  const completedQuestCount = checklistRows.filter((row) => row.done).length;
 
   const toggleManual = (id, exp, label) => {
     if (day[id]) return;
@@ -44,24 +45,71 @@ export default function HomeTab({ ctx }) {
 
   return (
     <div>
-      <div style={{ fontFamily: FONT_DISPLAY, fontSize: 24, color: C.text }}>{greet()}</div>
-      <div style={{ color: C.textFaint, fontSize: 12, fontFamily: FONT_MONO, marginTop: 2 }}>{ctx.today}</div>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <div style={{ color: C.textFaint, fontSize: 11, letterSpacing: 1.6 }} className="uppercase">
+            Training Hall
+          </div>
+          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 24, color: C.text, marginTop: 2 }}>{greet()}</div>
+          <div style={{ color: C.textFaint, fontSize: 12, fontFamily: FONT_MONO, marginTop: 2 }}>{ctx.today}</div>
+        </div>
+        <div
+          className="text-right shrink-0"
+          style={{
+            border: `1px solid ${C.violetDim}`,
+            background: C.surface,
+            borderRadius: 8,
+            padding: "7px 9px",
+          }}
+        >
+          <div style={{ color: C.textFaint, fontSize: 9.5, letterSpacing: 1.2 }} className="uppercase">
+            Quest
+          </div>
+          <div style={{ color: C.gold, fontFamily: FONT_MONO, fontSize: 12, marginTop: 2 }}>
+            {completedQuestCount}/{checklistRows.length}
+          </div>
+        </div>
+      </div>
 
       <Card className="mt-4" style={{ borderColor: C.violetDim, background: "linear-gradient(135deg, #16151f, #131419)" }}>
-        <div style={{ color: C.textFaint, fontSize: 11, letterSpacing: 1.5 }} className="uppercase mb-2">
-          Today's Mission
+        <div style={{ color: C.violet, fontSize: 11, letterSpacing: 1.5 }} className="uppercase mb-3">
+          Today's Mission · Training Hall
         </div>
-        <div style={{ fontSize: 12, color: C.textFaint }}>今天身份</div>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 18, color: C.gold, marginBottom: 8 }}>System Executor</div>
-        <div style={{ fontSize: 12, color: C.textFaint }}>今天唯一工作</div>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, color: C.text }}>執行策略。</div>
-        <div style={{ fontSize: 11.5, color: C.textFaint, marginTop: 10 }}>今天不需要證明自己。</div>
+        <div
+          style={{
+            borderLeft: `2px solid ${C.goldDim}`,
+            paddingLeft: 10,
+          }}
+        >
+          <div style={{ fontSize: 12, color: C.textFaint }}>今日身份</div>
+          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 20, color: C.gold, marginBottom: 10 }}>System Executor</div>
+          <div style={{ fontSize: 12, color: C.textFaint }}>唯一訓練任務</div>
+          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 17, color: C.text }}>執行策略。</div>
+        </div>
+        <div
+          style={{
+            fontSize: 11.5,
+            color: C.textFaint,
+            marginTop: 12,
+            paddingTop: 10,
+            borderTop: `1px solid ${C.hair}`,
+          }}
+        >
+          今天不需要證明自己，只需要回到系統。
+        </div>
       </Card>
 
       <Card className="mt-3" style={{ borderColor: C.hair }}>
         <div className="flex items-start gap-2">
           <Sparkles size={15} color={C.violet} className="mt-0.5 shrink-0" />
-          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13.5, color: C.textDim, lineHeight: 1.5 }}>{quote}</div>
+          <div>
+            <div style={{ color: C.textFaint, fontSize: 10, fontFamily: FONT_MONO, marginBottom: 3 }}>
+              SYSTEM PROMPT
+            </div>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13.5, color: C.textDim, lineHeight: 1.5 }}>
+              {quote}
+            </div>
+          </div>
         </div>
       </Card>
 
@@ -73,7 +121,7 @@ export default function HomeTab({ ctx }) {
         </Card>
       )}
 
-      <SectionLabel>Daily Quest</SectionLabel>
+      <SectionLabel>Training Quest</SectionLabel>
       <Card className="divide-y" style={{ borderColor: C.hair }}>
         {checklistRows.map((row, i) => (
           <div
@@ -97,16 +145,21 @@ export default function HomeTab({ ctx }) {
               >
                 {row.done && <Check size={12} color={C.sage} strokeWidth={3} />}
               </div>
-              <span
-                style={{
-                  fontSize: 13.5,
-                  color: row.done ? C.textDim : C.text,
-                  textDecoration: row.done ? "line-through" : "none",
-                  textDecorationColor: C.textFaint,
-                }}
-              >
-                {row.label}
-              </span>
+              <div>
+                <span
+                  style={{
+                    fontSize: 13.5,
+                    color: row.done ? C.textDim : C.text,
+                    textDecoration: row.done ? "line-through" : "none",
+                    textDecorationColor: C.textFaint,
+                  }}
+                >
+                  {row.label}
+                </span>
+                {row.manual && !row.done && (
+                  <div style={{ fontSize: 10.5, color: C.textFaint, marginTop: 1 }}>選擇訓練完成</div>
+                )}
+              </div>
             </div>
             {row.exp !== null && (
               <span style={{ fontFamily: FONT_MONO, fontSize: 11.5, color: C.textFaint }}>+{row.exp}</span>
@@ -115,7 +168,7 @@ export default function HomeTab({ ctx }) {
         ))}
       </Card>
       <div style={{ fontSize: 11, color: C.textFaint }} className="mt-3 text-center">
-        前往「修練」完成 Checklist、記錄交易或成功等待
+        前往「修練」完成 Checklist、記錄交易，或標記成功等待
       </div>
     </div>
   );

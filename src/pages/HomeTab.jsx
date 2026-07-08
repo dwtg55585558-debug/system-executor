@@ -116,7 +116,7 @@ export default function HomeTab({ ctx }) {
           className="mt-5"
           style={{
             display: "grid",
-            gridTemplateColumns: "160px minmax(0, 1fr)",
+            gridTemplateColumns: "190px minmax(0, 1fr)",
             gap: 14,
             alignItems: "stretch",
           }}
@@ -124,13 +124,13 @@ export default function HomeTab({ ctx }) {
           <div
             className="flex items-center justify-center"
             style={{
-              minHeight: 220,
+              minHeight: 260,
               borderRadius: 18,
               border: `1px solid rgba(203,163,95,0.44)`,
               background:
                 "radial-gradient(circle at 50% 20%, rgba(203,163,95,0.3), transparent 40%), linear-gradient(180deg, rgba(203,163,95,0.08), rgba(10,11,14,0.92))",
               boxShadow: "inset 0 0 34px rgba(0,0,0,0.5), 0 0 34px rgba(203,163,95,0.09)",
-              padding: 8,
+              padding: 4,
               overflow: "hidden",
             }}
           >
@@ -139,7 +139,7 @@ export default function HomeTab({ ctx }) {
               alt="System Executor apprentice character"
               style={{
                 width: "100%",
-                height: 206,
+                height: 252,
                 objectFit: "contain",
                 display: "block",
                 filter: "drop-shadow(0 16px 22px rgba(0,0,0,0.58))",

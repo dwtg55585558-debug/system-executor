@@ -202,8 +202,8 @@ export default function HomeTab({ ctx }) {
           <div
             className="shrink-0 flex items-center justify-center"
             style={{
-              width: 112,
-              minHeight: 150,
+              width: 150,
+              minHeight: 190,
               borderRadius: 18,
               border: `1px solid rgba(203,163,95,0.42)`,
               background:
@@ -218,7 +218,7 @@ export default function HomeTab({ ctx }) {
               alt="System Executor apprentice character"
               style={{
                 width: "100%",
-                height: 136,
+                height: 176,
                 objectFit: "contain",
                 display: "block",
                 filter: "drop-shadow(0 14px 18px rgba(0,0,0,0.48))",

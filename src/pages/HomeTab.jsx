@@ -116,12 +116,12 @@ export default function HomeTab({ ctx }) {
           <div
             className="shrink-0 flex items-center justify-center"
             style={{
-              width: 118,
-              height: 118,
+              width: 120,
+              height: 120,
               borderRadius: "50%",
               border: `1px solid rgba(203,163,95,0.36)`,
               background:
-                "radial-gradient(circle at 50% 38%, rgba(203,163,95,0.28), rgba(10,11,14,0.78) 58%, rgba(4,5,7,0.98))",
+                "radial-gradient(circle at 50% 42%, rgba(203,163,95,0.3), rgba(10,11,14,0.92) 56%, rgba(4,5,7,1))",
               boxShadow: "inset 0 0 28px rgba(0,0,0,0.48), 0 0 28px rgba(203,163,95,0.08)",
               overflow: "hidden",
             }}
@@ -130,10 +130,10 @@ export default function HomeTab({ ctx }) {
               src={executorApprentice}
               alt="System Executor apprentice character"
               style={{
-                width: 120,
-                height: 120,
+                width: 136,
+                height: 136,
                 objectFit: "cover",
-                objectPosition: "center 24%",
+                objectPosition: "center 32%",
                 display: "block",
                 filter: "drop-shadow(0 14px 16px rgba(0,0,0,0.55))",
               }}

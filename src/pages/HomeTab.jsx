@@ -6,6 +6,7 @@ import { C, FONT_DISPLAY, FONT_MONO } from "../styles/theme.js";
 import { QUOTES, JOURNAL_GAP_WARNING } from "../utils/constants.js";
 import { journalGapDays } from "../utils/helpers.js";
 import { titleForLevel } from "../utils/levels.js";
+import executorApprentice from "../assets/characters/executor-apprentice.png";
 
 export default function HomeTab({ ctx }) {
   const { day, addExp, updateDay, showToast, data, lvl } = ctx;
@@ -199,59 +200,30 @@ export default function HomeTab({ ctx }) {
         />
         <div className="flex items-stretch gap-3">
           <div
-            className="shrink-0 flex items-end justify-center"
+            className="shrink-0 flex items-center justify-center"
             style={{
-              width: 88,
-              minHeight: 132,
-              borderRadius: 14,
-              border: `1px solid rgba(203,163,95,0.35)`,
+              width: 112,
+              minHeight: 150,
+              borderRadius: 18,
+              border: `1px solid rgba(203,163,95,0.42)`,
               background:
-                "linear-gradient(180deg, rgba(203,163,95,0.08), rgba(10,11,14,0.82)), radial-gradient(circle at 50% 28%, rgba(203,163,95,0.18), transparent 42%)",
-              boxShadow: "inset 0 0 28px rgba(0,0,0,0.42)",
-              padding: "14px 8px 10px",
+                "radial-gradient(circle at 50% 18%, rgba(203,163,95,0.28), transparent 38%), linear-gradient(180deg, rgba(203,163,95,0.08), rgba(10,11,14,0.9))",
+              boxShadow: "inset 0 0 34px rgba(0,0,0,0.48), 0 0 28px rgba(203,163,95,0.08)",
+              padding: 8,
+              overflow: "hidden",
             }}
           >
-            <div style={{ position: "relative", width: 54, height: 100 }}>
-              <div
-                style={{
-                  position: "absolute",
-                  left: "50%",
-                  top: 0,
-                  width: 28,
-                  height: 28,
-                  transform: "translateX(-50%)",
-                  borderRadius: "50%",
-                  background: "linear-gradient(180deg, #272018, #090A0D)",
-                  border: `1px solid ${C.goldDim}`,
-                  boxShadow: "0 0 18px rgba(203,163,95,0.18)",
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  left: "50%",
-                  top: 25,
-                  width: 54,
-                  height: 68,
-                  transform: "translateX(-50%)",
-                  clipPath: "polygon(50% 0%, 84% 16%, 100% 100%, 0% 100%, 16% 16%)",
-                  background: "linear-gradient(180deg, #1A1510, #050608 72%)",
-                  border: `1px solid ${C.goldDim}`,
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  left: "50%",
-                  top: 34,
-                  width: 1,
-                  height: 58,
-                  transform: "translateX(-50%)",
-                  background: `linear-gradient(180deg, ${C.gold}, transparent)`,
-                  opacity: 0.8,
-                }}
-              />
-            </div>
+            <img
+              src={executorApprentice}
+              alt="System Executor apprentice character"
+              style={{
+                width: "100%",
+                height: 136,
+                objectFit: "contain",
+                display: "block",
+                filter: "drop-shadow(0 14px 18px rgba(0,0,0,0.48))",
+              }}
+            />
           </div>
 
           <div className="min-w-0 flex-1">

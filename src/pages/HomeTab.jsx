@@ -130,22 +130,20 @@ export default function HomeTab({ ctx }) {
               src={executorApprentice}
               alt="System Executor apprentice character"
               style={{
-                width: 136,
-                height: 136,
-                objectFit: "cover",
-                objectPosition: "center 32%",
-                display: "block",
-                filter: "drop-shadow(0 14px 16px rgba(0,0,0,0.55))",
+                width: "100%",
+                maxWidth: 130,
+                height: "auto",
+                objectFit: "contain",
               }}
             />
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <div style={{ fontFamily: FONT_DISPLAY, fontSize: 34, color: C.text, lineHeight: 1 }}>
+            <div className="flex items-center justify-between gap-2 min-w-0">
+              <div style={{ fontFamily: FONT_DISPLAY, fontSize: 34, color: C.text, lineHeight: 1, minWidth: 0, flexShrink: 1 }}>
                 Lv.{lvl.level}
               </div>
-              <div style={{ textAlign: "right" }}>
+              <div style={{ textAlign: "right", minWidth: 0, flexShrink: 0 }}>
                 <div style={{ color: C.gold, fontSize: 12, fontWeight: 700 }}>{rankTitle}</div>
                 <div style={{ color: C.textFaint, fontSize: 10, marginTop: 1 }}>System Executor</div>
               </div>

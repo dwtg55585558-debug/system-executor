@@ -1,8 +1,28 @@
+# Roadmap
+
+## Visual Direction
+
+All roadmap work should move the product toward a Trading Cultivation RPG, not a minimal trading tool.
+
+The target style is dark fantasy cultivation with a black and gold color system. Screens should feel like premium mobile RPG interfaces for disciplined martial training: layered dark cards, gold rank/progression emphasis, compact quest rows, cinematic headers, boss challenge panels, equipment/skill surfaces, and an achievement hall.
+
+The mood should be mysterious, disciplined, premium, and focused. The app may use cultivation and martial arts language, but the practical trading behavior must remain clear. RPG framing should strengthen the process loop: calibrate identity, train, execute, resist bosses, reflect honestly, and grow.
+
+Design guardrails:
+
+- Prioritize black, charcoal, ink, and gold as the dominant visual system.
+- Use muted bronze, ember, jade, crimson, violet, and ash only as supporting accents.
+- Make progress feel like character growth, not account growth.
+- Present tasks as training quests and system drills.
+- Present behavioral failures as boss encounters or integrity damage.
+- Present achievements as a hall of earned discipline.
+- Avoid generic fintech dashboards, bright SaaS styling, arcade game tropes, and profit-first language.
+
 ## Sprint 1: Training Hall Home
 
 ### 1. Product goal
 
-Transform the current Home tab from a simple daily dashboard into the player's Training Hall: the first screen should feel like entering the daily discipline space for a Trading Cultivation RPG while preserving the existing local-first behavior, EXP rewards, journal warning, and Daily Quest completion rules.
+Transform the current Home tab from a simple daily dashboard into the player's Training Hall: the first screen should feel like entering the daily discipline space for a dark fantasy Trading Cultivation RPG while preserving the existing local-first behavior, EXP rewards, journal warning, and Daily Quest completion rules.
 
 The sprint should be a presentation and information-architecture upgrade, not a domain-rule rewrite. Home should continue to answer the same practical questions:
 
@@ -36,8 +56,8 @@ The sprint should be a presentation and information-architecture upgrade, not a 
 - Existing `lucide-react` icons already available in the app, starting with `Sparkles` and `Check`; add icons only where they clarify the Training Hall hierarchy.
 - Theme tokens from `src/styles/theme.js`:
   - `C.surface`, `C.raised`, `C.hair` for panel structure
-  - `C.violet` and `C.violetDim` for system/training energy
-  - `C.gold` and `C.goldDim` for identity/progression emphasis
+  - `C.gold` and `C.goldDim` for identity, rank, progression, and premium emphasis
+  - `C.violet` and `C.violetDim` only as a restrained system/training energy accent
   - `C.sage` and `C.sageDim` for completed quest state
   - `FONT_DISPLAY` for RPG identity moments
   - `FONT_MONO` for dates, EXP values, and compact system labels
@@ -82,7 +102,7 @@ The sprint should be a presentation and information-architecture upgrade, not a 
   - derived rows for checklist pass, followed-strategy trade, successful wait, stop loss, and journal remain read-only on Home
 - No new persisted state fields are added.
 - No EXP amounts, integrity rules, quest completion rules, or trade/journal logic are changed.
-- The updated Home remains mobile-first and visually consistent with the existing near-black, violet, gold, ash, and sage identity system.
+- The updated Home remains mobile-first and visually consistent with the new near-black and gold cultivation RPG direction, using violet only as a supporting accent.
 - React source changes for this sprint are limited to the Home presentation unless a tiny supporting component reuse is clearly justified.
 - A production build succeeds after implementation.
 

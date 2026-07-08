@@ -32,6 +32,16 @@ export default function HomeTab({ ctx }) {
   const questPct = Math.round((completedQuestCount / checklistRows.length) * 100);
   const expPct = lvl.expToNext ? Math.round((lvl.expInto / lvl.expToNext) * 100) : 100;
   const rankTitle = titleForLevel(lvl.level);
+  const characterView = {
+    identity: "System Executor",
+    rank: rankTitle,
+    level: lvl.level,
+    totalExp: data.identity.totalExp,
+    expInto: lvl.expInto,
+    expToNext: lvl.expToNext,
+    expPct,
+    integrity: data.identity.integrity,
+  };
 
   const toggleManual = (id, exp, label) => {
     if (day[id]) return;
@@ -163,6 +173,163 @@ export default function HomeTab({ ctx }) {
           <div style={{ fontFamily: FONT_DISPLAY, fontSize: 20, color: C.text, marginTop: 7 }}>執行策略。</div>
           <div style={{ fontSize: 11.5, color: C.textFaint, marginTop: 5 }}>
             今天不需要證明自己，只需要回到系統。
+          </div>
+        </div>
+      </Card>
+
+      <Card
+        className="mt-3"
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          borderColor: C.goldDim,
+          background:
+            "radial-gradient(circle at 18% 12%, rgba(203,163,95,0.13), transparent 34%), linear-gradient(135deg, rgba(8,9,12,0.98), rgba(19,20,25,0.98) 58%, rgba(12,13,17,0.98))",
+          boxShadow: "inset 0 1px 0 rgba(203,163,95,0.12), 0 16px 34px rgba(0,0,0,0.28)",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            inset: "auto 12px 10px 12px",
+            height: 1,
+            background: `linear-gradient(90deg, transparent, ${C.goldDim}, transparent)`,
+            opacity: 0.75,
+          }}
+        />
+        <div className="flex items-stretch gap-3">
+          <div
+            className="shrink-0 flex items-end justify-center"
+            style={{
+              width: 88,
+              minHeight: 132,
+              borderRadius: 14,
+              border: `1px solid rgba(203,163,95,0.35)`,
+              background:
+                "linear-gradient(180deg, rgba(203,163,95,0.08), rgba(10,11,14,0.82)), radial-gradient(circle at 50% 28%, rgba(203,163,95,0.18), transparent 42%)",
+              boxShadow: "inset 0 0 28px rgba(0,0,0,0.42)",
+              padding: "14px 8px 10px",
+            }}
+          >
+            <div style={{ position: "relative", width: 54, height: 100 }}>
+              <div
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: 0,
+                  width: 28,
+                  height: 28,
+                  transform: "translateX(-50%)",
+                  borderRadius: "50%",
+                  background: "linear-gradient(180deg, #272018, #090A0D)",
+                  border: `1px solid ${C.goldDim}`,
+                  boxShadow: "0 0 18px rgba(203,163,95,0.18)",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: 25,
+                  width: 54,
+                  height: 68,
+                  transform: "translateX(-50%)",
+                  clipPath: "polygon(50% 0%, 84% 16%, 100% 100%, 0% 100%, 16% 16%)",
+                  background: "linear-gradient(180deg, #1A1510, #050608 72%)",
+                  border: `1px solid ${C.goldDim}`,
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: 34,
+                  width: 1,
+                  height: 58,
+                  transform: "translateX(-50%)",
+                  background: `linear-gradient(180deg, ${C.gold}, transparent)`,
+                  opacity: 0.8,
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div
+              className="uppercase"
+              style={{ color: C.gold, fontFamily: FONT_MONO, fontSize: 10, letterSpacing: 1.3 }}
+            >
+              Character Panel
+            </div>
+            <div style={{ fontFamily: FONT_DISPLAY, color: C.text, fontSize: 23, lineHeight: 1.1, marginTop: 5 }}>
+              {characterView.identity}
+            </div>
+            <div style={{ color: C.gold, fontSize: 12.5, lineHeight: 1.35, marginTop: 4 }}>
+              Lv.{characterView.level} · {characterView.rank}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              <div
+                style={{
+                  border: `1px solid rgba(203,163,95,0.22)`,
+                  background: "rgba(10,11,14,0.48)",
+                  borderRadius: 10,
+                  padding: "8px 9px",
+                }}
+              >
+                <div style={{ color: C.textFaint, fontFamily: FONT_MONO, fontSize: 9.5 }}>TOTAL EXP</div>
+                <div style={{ color: C.text, fontFamily: FONT_MONO, fontSize: 13, marginTop: 3 }}>
+                  {characterView.totalExp}
+                </div>
+              </div>
+              <div
+                style={{
+                  border: `1px solid rgba(203,163,95,0.22)`,
+                  background: "rgba(10,11,14,0.48)",
+                  borderRadius: 10,
+                  padding: "8px 9px",
+                }}
+              >
+                <div style={{ color: C.textFaint, fontFamily: FONT_MONO, fontSize: 9.5 }}>INTEGRITY</div>
+                <div
+                  style={{
+                    color: characterView.integrity >= 80 ? C.gold : C.ash,
+                    fontFamily: FONT_MONO,
+                    fontSize: 13,
+                    marginTop: 3,
+                  }}
+                >
+                  {characterView.integrity}%
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <div className="flex items-center justify-between gap-2">
+                <span style={{ color: C.textFaint, fontFamily: FONT_MONO, fontSize: 10 }}>EXP PROGRESS</span>
+                <span style={{ color: C.gold, fontFamily: FONT_MONO, fontSize: 10.5 }}>
+                  {characterView.expToNext ? `${characterView.expInto}/${characterView.expToNext}` : "MAX"}
+                </span>
+              </div>
+              <div
+                style={{
+                  height: 6,
+                  background: "rgba(42,44,54,0.86)",
+                  borderRadius: 999,
+                  marginTop: 6,
+                  overflow: "hidden",
+                  border: `1px solid rgba(203,163,95,0.12)`,
+                }}
+              >
+                <div
+                  style={{
+                    width: `${characterView.expPct}%`,
+                    height: "100%",
+                    background: `linear-gradient(90deg, ${C.goldDim}, ${C.gold})`,
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </Card>

@@ -250,3 +250,179 @@ This sprint remains a visual and information-hierarchy upgrade. It must not chan
   - Update after implementation only if the sprint introduces new vocabulary or changes product framing.
 - `docs/ROADMAP.md`
   - Keep the implementation checklist and follow-up decisions current.
+
+## Sprint 2: RPG Character System
+
+### 1. Product goal
+
+Add the first version of the RPG Character System so the Home/Training Hall experience starts to feel like a cultivation character screen, not only a polished task dashboard. The user should see a visible System Executor character presence, current cultivation rank, behavior-based growth, and clear entrances into skills, bosses, and achievements.
+
+This sprint should remain local-first and presentational. It should not introduce login, backend services, API calls, new reward rules, PnL-based status, or changes to trading and journal logic. The character should initially be derived from existing app state and should make discipline progress more legible without changing how progress is earned.
+
+### 2. What should be added in v1
+
+- Character panel
+  - Add a prominent visual character area inside the Training Hall.
+  - Use a silhouette, emoji/avatar placeholder, CSS-generated figure, or framed emblem as the first pass.
+  - Present the user as `System Executor`, with current title/rank and discipline status.
+- Cultivation rank
+  - Surface the existing `level`, `title`, `totalExp`, and EXP progress as cultivation rank data.
+  - Use gold hierarchy for rank/title and compact mono labels for system values.
+- Attribute growth
+  - Show behavior-based attributes derived from current state, such as discipline, patience, integrity, preparation, and reflection.
+  - In v1, attributes can be simple visual bars or stat rows calculated from existing completion and history signals.
+- Equipment/skills entry
+  - Add a compact entry point for future equipment, skills, or technique slots.
+  - In v1, this can be a locked/preview card or a small set of derived skill badges, with no new persisted inventory system.
+- Boss challenge entry
+  - Add a clear entry point for behavioral enemies such as fear, greed, revenge trading, boredom, and impulsive entries.
+  - In v1, this should be a presentational challenge panel derived from today's discipline context, not a new combat system.
+- Achievement hall entry
+  - Add an achievement hall preview or entry point that frames repeatable discipline as earned plaques/medals.
+  - In v1, use existing quest completion, streak-like history, or completed process actions where available.
+
+### 3. UI hierarchy
+
+1. Character identity panel
+   - First-screen anchor below or within the Training Hall hero.
+   - Shows character visual, `System Executor`, cultivation rank/title, total EXP/progress, and integrity.
+2. Current cultivation status
+   - Compact rank/progress strip using existing level, title, EXP, and integrity data.
+   - Keep status process-based and avoid account-performance language.
+3. Attribute growth
+   - Dense RPG stat rows or small plaques that translate existing behavior into growth signals.
+   - Suggested v1 attributes:
+     - Discipline: today's quest completion ratio.
+     - Integrity: existing integrity value.
+     - Patience: successful waiting signal where available.
+     - Preparation: checklist/morning plan completion.
+     - Reflection: journal completion or journal-gap state.
+4. Training quests
+   - Keep current quest checklist visible and behaviorally unchanged.
+   - Position it as the active training loop feeding character growth.
+5. Boss challenge entry
+   - Compact panel for today's behavioral opponent or active risk.
+   - May derive from incomplete process items, journal gap, or temptation-resistance context.
+6. Equipment/skills entry
+   - Small slots or skill cards that imply build progression without adding inventory mechanics.
+7. Achievement hall entry
+   - Preview plaque row or card that points toward earned discipline history.
+   - Should feel aspirational but still grounded in existing local process data.
+
+### 4. Data source strategy
+
+- Use existing local app state only.
+- Do not add login, backend storage, remote APIs, or network calls.
+- Do not change reward calculations, EXP amounts, integrity rules, quest completion rules, trading logic, or journal logic.
+- Derive character data from current fields where possible:
+  - `level`
+  - `title`
+  - `totalExp`
+  - `integrity`
+  - existing EXP progress calculation used by `IdentityRing`
+  - today's quest completion and `checklistRows`
+  - `manualTasks`
+  - `followedToday`
+  - successful waiting signal if already available
+  - `data.history`
+  - today's journal state
+  - `journalGapDays(data.history)`
+- Treat new RPG fields as view-model data, not persisted domain data, for v1.
+- If a derived stat is ambiguous, label it conservatively and keep the underlying trading meaning clear.
+- Avoid storing character class, equipment, boss state, or achievement collections until a later sprint deliberately defines the domain model.
+
+### 5. Components to reuse
+
+- `Card`
+  - Use for character frame, attribute panel, boss entry, equipment/skills entry, and achievement hall preview.
+- `IdentityRing`
+  - Reuse for rank/progress if the required props are already available cleanly.
+  - Do not force new state plumbing solely for visual reuse.
+- `SectionLabel`
+  - Reuse for compact section labels such as Attributes, Boss Challenge, Skills, or Achievement Hall.
+- Existing Home/Training Hall data and handlers
+  - Preserve current selectors, derived quest rows, and manual task behavior.
+- Existing theme tokens
+  - `C.void`, `C.surface`, `C.raised`, `C.raised2`, `C.hair`
+  - `C.gold`, `C.goldDim`
+  - `C.text`, `C.textDim`, `C.textFaint`
+  - `C.ash`, `C.ashDim`
+  - `C.sage`, `C.sageDim`
+  - muted ember/crimson/jade/violet accents only where state needs them
+  - `FONT_DISPLAY` and `FONT_MONO`
+- Existing `lucide-react` icons
+  - Use only for clear RPG interface affordances such as rank, shield/integrity, target/boss, medal/achievement, or skill slots.
+
+### 6. New components if needed
+
+Prefer implementing v1 inside `HomeTab` with small local render helpers first. Add reusable components only if the UI becomes meaningfully clearer or if the same surface is needed outside Home.
+
+Potential new components:
+
+- `CharacterPanel`
+  - Presents avatar/silhouette, identity, cultivation rank, EXP, and integrity.
+  - Should accept derived props only.
+- `AttributeGrowthPanel`
+  - Renders behavior-based attributes as compact stat rows or bars.
+  - Should not own reward or trading logic.
+- `RpgEntryCard`
+  - Small reusable entry card for Boss Challenge, Equipment/Skills, and Achievement Hall.
+  - Useful only if those cards share enough layout and state treatment.
+
+Do not add a full character model, equipment inventory, boss engine, achievement engine, or routing changes in Sprint 2 unless explicitly scheduled later.
+
+### 7. Smallest safe implementation steps
+
+1. Inspect current app context and Home data shape before adding any new props or helpers.
+2. Define a local derived `characterView` or equivalent view-model inside the Home/Training Hall scope.
+3. Map existing `level`, `title`, `totalExp`, integrity, quest completion, and today history into character/rank/status display fields.
+4. Add a presentational character panel with a placeholder visual and existing rank/progress data.
+5. Add a compact attribute-growth panel derived only from existing process signals.
+6. Add three small entry surfaces:
+   - Equipment/Skills
+   - Boss Challenge
+   - Achievement Hall
+7. Keep Training Quest completion logic and manual task click behavior untouched.
+8. Keep journal warning logic untouched.
+9. Keep the first pass mobile-first and dense; avoid pushing the active quest loop too far below the first viewport.
+10. Run the existing build or lint command after implementation.
+11. Update docs after implementation if the sprint introduces new vocabulary, component responsibilities, or follow-up domain decisions.
+
+### 8. Acceptance criteria
+
+- Home/Training Hall includes a visible System Executor character presence.
+- The first version clearly shows cultivation rank/title, total EXP/progress, and integrity from existing app state.
+- Attribute growth is visible and derived from behavior/process data only.
+- Equipment/skills, boss challenge, and achievement hall entries exist as presentational v1 surfaces.
+- No new persisted character, equipment, boss, or achievement domain model is introduced.
+- No login, backend, API calls, or remote dependencies are added.
+- No reward rules, EXP values, integrity rules, trading logic, journal logic, or quest completion rules change.
+- Character status never rewards or ranks the user by PnL.
+- The interface remains mobile-first, dark fantasy cultivation RPG, premium black/gold, and readable during a trading day.
+- Existing quest rows and manual completion behavior continue to work exactly as before.
+- The production build succeeds after implementation.
+
+### 9. Files likely to change
+
+- `src/pages/HomeTab.jsx`
+  - Primary file for deriving character view data and adding the v1 character panel, attributes, boss entry, skills entry, and achievement hall entry.
+- `src/components/IdentityRing.jsx`
+  - Reuse as-is if it fits. Change only if a small sizing or presentation adjustment is needed for the character panel.
+- `src/components/Card.jsx`
+  - Not expected to change; reuse current card behavior.
+- `src/components/SectionLabel.jsx`
+  - Not expected to change; reuse for compact RPG labels.
+- `src/styles/theme.js`
+  - Change only if existing tokens cannot support the character-system hierarchy.
+- `src/components/CharacterPanel.jsx`
+  - Add only if the character surface becomes too large to keep cleanly inside `HomeTab`.
+- `src/components/AttributeGrowthPanel.jsx`
+  - Add only if attribute rendering is reusable or too complex for a local helper.
+- `src/components/RpgEntryCard.jsx`
+  - Add only if Boss Challenge, Equipment/Skills, and Achievement Hall share a reusable card pattern.
+- `docs/FEATURE_MAP.md`
+  - Update after implementation if Home's visible feature set changes.
+- `docs/ARCHITECTURE.md`
+  - Update after implementation only if new components or derived view-model responsibilities need to be documented.
+- `docs/ROADMAP.md`
+  - Keep Sprint 2 scope and follow-up decisions current.

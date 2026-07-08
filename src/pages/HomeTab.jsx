@@ -66,8 +66,8 @@ export default function HomeTab({ ctx }) {
           overflow: "hidden",
           borderColor: C.goldDim,
           background:
-            "linear-gradient(145deg, rgba(10,11,14,0.98) 0%, rgba(19,20,25,0.96) 54%, rgba(30,27,22,0.98) 100%)",
-          boxShadow: "0 18px 38px rgba(0,0,0,0.34), inset 0 1px 0 rgba(203,163,95,0.14)",
+            "radial-gradient(circle at 18% 8%, rgba(203,163,95,0.2), transparent 34%), linear-gradient(145deg, rgba(8,9,12,0.99) 0%, rgba(17,18,23,0.98) 56%, rgba(31,27,20,0.98) 100%)",
+          boxShadow: "0 22px 46px rgba(0,0,0,0.42), inset 0 1px 0 rgba(203,163,95,0.16)",
         }}
       >
         <div
@@ -76,9 +76,10 @@ export default function HomeTab({ ctx }) {
             inset: "0 0 auto 0",
             height: 2,
             background: `linear-gradient(90deg, transparent, ${C.gold}, transparent)`,
-            opacity: 0.75,
+            opacity: 0.85,
           }}
         />
+
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div
@@ -87,24 +88,24 @@ export default function HomeTab({ ctx }) {
             >
               Training Hall
             </div>
-            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 25, color: C.text, marginTop: 7 }}>{greet()}</div>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 24, color: C.text, marginTop: 7 }}>{greet()}</div>
             <div style={{ color: C.textFaint, fontSize: 12, fontFamily: FONT_MONO, marginTop: 3 }}>{ctx.today}</div>
           </div>
 
           <div
             className="text-right shrink-0"
             style={{
-              border: `1px solid rgba(203,163,95,0.38)`,
-              background: "rgba(10,11,14,0.58)",
-              borderRadius: 10,
+              border: `1px solid rgba(203,163,95,0.42)`,
+              background: "rgba(10,11,14,0.62)",
+              borderRadius: 12,
               padding: "8px 10px",
-              minWidth: 72,
+              minWidth: 74,
             }}
           >
             <div style={{ color: C.textFaint, fontSize: 9.5, letterSpacing: 1.1 }} className="uppercase">
               Quest Seal
             </div>
-            <div style={{ color: C.gold, fontFamily: FONT_MONO, fontSize: 13, marginTop: 3 }}>
+            <div style={{ color: C.gold, fontFamily: FONT_MONO, fontSize: 14, marginTop: 3 }}>
               {completedQuestCount}/{checklistRows.length}
             </div>
             <div style={{ color: C.textFaint, fontFamily: FONT_MONO, fontSize: 9.5, marginTop: 1 }}>{questPct}%</div>
@@ -112,103 +113,23 @@ export default function HomeTab({ ctx }) {
         </div>
 
         <div
+          className="mt-5"
           style={{
-            marginTop: 20,
-            paddingTop: 16,
-            borderTop: `1px solid rgba(203,163,95,0.2)`,
+            display: "grid",
+            gridTemplateColumns: "160px minmax(0, 1fr)",
+            gap: 14,
+            alignItems: "stretch",
           }}
         >
-          <div style={{ fontSize: 11, color: C.textFaint, letterSpacing: 1.2 }} className="uppercase">
-            System Executor Identity
-          </div>
-          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 28, color: C.gold, lineHeight: 1.12, marginTop: 4 }}>
-            System Executor
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 mt-4">
-            <div style={{ border: `1px solid ${C.hair}`, background: "rgba(27,29,36,0.54)", borderRadius: 10, padding: 9 }}>
-              <div style={{ color: C.textFaint, fontSize: 9.5, fontFamily: FONT_MONO }}>RANK</div>
-              <div style={{ color: C.text, fontSize: 12, marginTop: 4, lineHeight: 1.25 }}>Lv.{lvl.level}</div>
-              <div style={{ color: C.gold, fontSize: 10.5, marginTop: 1, lineHeight: 1.25 }}>{rankTitle}</div>
-            </div>
-            <div style={{ border: `1px solid ${C.hair}`, background: "rgba(27,29,36,0.54)", borderRadius: 10, padding: 9 }}>
-              <div style={{ color: C.textFaint, fontSize: 9.5, fontFamily: FONT_MONO }}>EXP</div>
-              <div style={{ color: C.text, fontFamily: FONT_MONO, fontSize: 12, marginTop: 4 }}>{expPct}%</div>
-              <div
-                style={{
-                  height: 3,
-                  background: C.hair,
-                  borderRadius: 999,
-                  marginTop: 7,
-                  overflow: "hidden",
-                }}
-              >
-                <div style={{ width: `${expPct}%`, height: "100%", background: C.gold }} />
-              </div>
-            </div>
-            <div style={{ border: `1px solid ${C.hair}`, background: "rgba(27,29,36,0.54)", borderRadius: 10, padding: 9 }}>
-              <div style={{ color: C.textFaint, fontSize: 9.5, fontFamily: FONT_MONO }}>INTEGRITY</div>
-              <div style={{ color: data.identity.integrity >= 80 ? C.gold : C.ash, fontFamily: FONT_MONO, fontSize: 12, marginTop: 4 }}>
-                {data.identity.integrity}%
-              </div>
-              <div style={{ color: C.textFaint, fontSize: 10, marginTop: 2 }}>Discipline</div>
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="mt-4"
-          style={{
-            border: `1px solid rgba(203,163,95,0.26)`,
-            background: "rgba(203,163,95,0.07)",
-            borderRadius: 12,
-            padding: 12,
-          }}
-        >
-          <div className="flex items-center gap-2" style={{ color: C.gold, fontSize: 11, letterSpacing: 1.1 }}>
-            <Swords size={14} />
-            <span className="uppercase" style={{ fontFamily: FONT_MONO }}>
-              Today's Mission
-            </span>
-          </div>
-          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 20, color: C.text, marginTop: 7 }}>執行策略。</div>
-          <div style={{ fontSize: 11.5, color: C.textFaint, marginTop: 5 }}>
-            今天不需要證明自己，只需要回到系統。
-          </div>
-        </div>
-      </Card>
-
-      <Card
-        className="mt-3"
-        style={{
-          position: "relative",
-          overflow: "hidden",
-          borderColor: C.goldDim,
-          background:
-            "radial-gradient(circle at 18% 12%, rgba(203,163,95,0.13), transparent 34%), linear-gradient(135deg, rgba(8,9,12,0.98), rgba(19,20,25,0.98) 58%, rgba(12,13,17,0.98))",
-          boxShadow: "inset 0 1px 0 rgba(203,163,95,0.12), 0 16px 34px rgba(0,0,0,0.28)",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            inset: "auto 12px 10px 12px",
-            height: 1,
-            background: `linear-gradient(90deg, transparent, ${C.goldDim}, transparent)`,
-            opacity: 0.75,
-          }}
-        />
-        <div className="flex items-stretch gap-3">
           <div
-            className="shrink-0 flex items-center justify-center"
+            className="flex items-center justify-center"
             style={{
-              width: 150,
-              minHeight: 190,
+              minHeight: 220,
               borderRadius: 18,
-              border: `1px solid rgba(203,163,95,0.42)`,
+              border: `1px solid rgba(203,163,95,0.44)`,
               background:
-                "radial-gradient(circle at 50% 18%, rgba(203,163,95,0.28), transparent 38%), linear-gradient(180deg, rgba(203,163,95,0.08), rgba(10,11,14,0.9))",
-              boxShadow: "inset 0 0 34px rgba(0,0,0,0.48), 0 0 28px rgba(203,163,95,0.08)",
+                "radial-gradient(circle at 50% 20%, rgba(203,163,95,0.3), transparent 40%), linear-gradient(180deg, rgba(203,163,95,0.08), rgba(10,11,14,0.92))",
+              boxShadow: "inset 0 0 34px rgba(0,0,0,0.5), 0 0 34px rgba(203,163,95,0.09)",
               padding: 8,
               overflow: "hidden",
             }}
@@ -218,48 +139,51 @@ export default function HomeTab({ ctx }) {
               alt="System Executor apprentice character"
               style={{
                 width: "100%",
-                height: 176,
+                height: 206,
                 objectFit: "contain",
                 display: "block",
-                filter: "drop-shadow(0 14px 18px rgba(0,0,0,0.48))",
+                filter: "drop-shadow(0 16px 22px rgba(0,0,0,0.58))",
               }}
             />
           </div>
 
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0">
             <div
               className="uppercase"
-              style={{ color: C.gold, fontFamily: FONT_MONO, fontSize: 10, letterSpacing: 1.3 }}
+              style={{ fontSize: 10.5, color: C.textFaint, letterSpacing: 1.35, fontFamily: FONT_MONO }}
             >
-              Character Panel
+              System Executor Identity
             </div>
-            <div style={{ fontFamily: FONT_DISPLAY, color: C.text, fontSize: 23, lineHeight: 1.1, marginTop: 5 }}>
+
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 28, color: C.gold, lineHeight: 1.08, marginTop: 5 }}>
               {characterView.identity}
             </div>
-            <div style={{ color: C.gold, fontSize: 12.5, lineHeight: 1.35, marginTop: 4 }}>
+
+            <div style={{ color: C.gold, fontSize: 12.5, lineHeight: 1.35, marginTop: 5 }}>
               Lv.{characterView.level} · {characterView.rank}
             </div>
 
             <div className="grid grid-cols-2 gap-2 mt-3">
               <div
                 style={{
-                  border: `1px solid rgba(203,163,95,0.22)`,
-                  background: "rgba(10,11,14,0.48)",
+                  border: `1px solid rgba(203,163,95,0.24)`,
+                  background: "rgba(10,11,14,0.52)",
                   borderRadius: 10,
-                  padding: "8px 9px",
+                  padding: "9px 10px",
                 }}
               >
                 <div style={{ color: C.textFaint, fontFamily: FONT_MONO, fontSize: 9.5 }}>TOTAL EXP</div>
-                <div style={{ color: C.text, fontFamily: FONT_MONO, fontSize: 13, marginTop: 3 }}>
+                <div style={{ color: C.text, fontFamily: FONT_MONO, fontSize: 14, marginTop: 4 }}>
                   {characterView.totalExp}
                 </div>
               </div>
+
               <div
                 style={{
-                  border: `1px solid rgba(203,163,95,0.22)`,
-                  background: "rgba(10,11,14,0.48)",
+                  border: `1px solid rgba(203,163,95,0.24)`,
+                  background: "rgba(10,11,14,0.52)",
                   borderRadius: 10,
-                  padding: "8px 9px",
+                  padding: "9px 10px",
                 }}
               >
                 <div style={{ color: C.textFaint, fontFamily: FONT_MONO, fontSize: 9.5 }}>INTEGRITY</div>
@@ -267,8 +191,8 @@ export default function HomeTab({ ctx }) {
                   style={{
                     color: characterView.integrity >= 80 ? C.gold : C.ash,
                     fontFamily: FONT_MONO,
-                    fontSize: 13,
-                    marginTop: 3,
+                    fontSize: 14,
+                    marginTop: 4,
                   }}
                 >
                   {characterView.integrity}%
@@ -300,6 +224,27 @@ export default function HomeTab({ ctx }) {
                     background: `linear-gradient(90deg, ${C.goldDim}, ${C.gold})`,
                   }}
                 />
+              </div>
+            </div>
+
+            <div
+              className="mt-4"
+              style={{
+                border: `1px solid rgba(203,163,95,0.26)`,
+                background: "rgba(203,163,95,0.07)",
+                borderRadius: 12,
+                padding: 12,
+              }}
+            >
+              <div className="flex items-center gap-2" style={{ color: C.gold, fontSize: 11, letterSpacing: 1.1 }}>
+                <Swords size={14} />
+                <span className="uppercase" style={{ fontFamily: FONT_MONO }}>
+                  Today's Mission
+                </span>
+              </div>
+              <div style={{ fontFamily: FONT_DISPLAY, fontSize: 20, color: C.text, marginTop: 7 }}>執行策略。</div>
+              <div style={{ fontSize: 11.5, color: C.textFaint, marginTop: 5 }}>
+                今天不需要證明自己，只需要回到系統。
               </div>
             </div>
           </div>

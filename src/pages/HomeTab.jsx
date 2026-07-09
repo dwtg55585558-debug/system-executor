@@ -61,6 +61,28 @@ export default function HomeTab({ ctx }) {
 
   const energy = data.identity.energy;
   const maxEnergy = data.identity.maxEnergy;
+  const energyPercent = Math.max(0, Math.min(100, (energy / maxEnergy) * 100));
+  const energyState =
+    energy > 0
+      ? {
+          label: "穩定",
+          color: "#6B9A7E",
+          dim: "#3E5A49",
+          glow: "rgba(107,154,126,0.18)",
+        }
+      : energy === 0
+        ? {
+            label: "今日額度已用完",
+            color: "#D19A42",
+            dim: "#6B4E27",
+            glow: "rgba(209,154,66,0.18)",
+          }
+        : {
+            label: "過度交易",
+            color: "#B9574F",
+            dim: "#653735",
+            glow: "rgba(185,87,79,0.18)",
+          };
 
   const toggleManual = (id, exp, label, statKey) => {
     if (day[id]) return;
@@ -355,18 +377,35 @@ export default function HomeTab({ ctx }) {
                 width: 42,
                 height: 42,
                 borderRadius: "50%",
-                background: "rgba(203,163,95,0.08)",
-                border: `1px solid ${C.goldDim}`,
-                color: C.gold,
+                background: energyState.glow,
+                border: `1px solid ${energyState.dim}`,
+                color: energyState.color,
               }}
             >
               <Target size={19} />
             </div>
-            <div>
-              <div style={{ color: C.textFaint, fontSize: 11, fontFamily: FONT_MONO }}>Energy</div>
-              <div style={{ color: C.text, fontFamily: FONT_DISPLAY, fontSize: 25, marginTop: 2 }}>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <div style={{ color: C.textFaint, fontSize: 11, fontFamily: FONT_MONO }}>Energy</div>
+                <div style={{ color: energyState.color, fontSize: 10, fontWeight: 800 }}>
+                  {energyState.label}
+                </div>
+              </div>
+              <div style={{ color: energyState.color, fontFamily: FONT_DISPLAY, fontSize: 25, marginTop: 2 }}>
                 {energy}
                 <span style={{ color: C.textFaint, fontSize: 13 }}> /{maxEnergy}</span>
+              </div>
+              <div
+                className="mt-2 h-1.5 rounded-full overflow-hidden"
+                style={{ background: "rgba(42,44,54,0.86)" }}
+              >
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${energyPercent}%`,
+                    background: `linear-gradient(90deg, ${energyState.dim}, ${energyState.color})`,
+                  }}
+                />
               </div>
             </div>
           </div>

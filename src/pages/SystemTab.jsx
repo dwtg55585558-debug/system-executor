@@ -15,6 +15,24 @@ export default function SystemTab({ ctx }) {
   };
   const expPercent = (character.exp / character.nextLevelExp) * 100;
   const energyPercent = Math.max(0, Math.min(100, (character.energy / character.maxEnergy) * 100));
+  const energyState =
+    character.energy > 0
+      ? {
+          label: "穩定",
+          color: "#6B9A7E",
+          dim: "#3E5A49",
+        }
+      : character.energy === 0
+        ? {
+            label: "今日額度已用完",
+            color: "#D19A42",
+            dim: "#6B4E27",
+          }
+        : {
+            label: "過度交易",
+            color: "#B9574F",
+            dim: "#653735",
+          };
 
   return (
     <div>
@@ -105,9 +123,14 @@ export default function SystemTab({ ctx }) {
           <div>
             <div className="flex justify-between mb-1">
               <span style={{ color: C.textDim, fontSize: 13 }}>Energy</span>
-              <span style={{ color: C.gold, fontFamily: FONT_MONO, fontSize: 13 }}>
-                {character.energy} / {character.maxEnergy}
-              </span>
+              <div className="flex items-center gap-2">
+                <span style={{ color: energyState.color, fontSize: 11, fontWeight: 800 }}>
+                  {energyState.label}
+                </span>
+                <span style={{ color: energyState.color, fontFamily: FONT_MONO, fontSize: 13 }}>
+                  {character.energy} / {character.maxEnergy}
+                </span>
+              </div>
             </div>
 
             <div
@@ -118,7 +141,7 @@ export default function SystemTab({ ctx }) {
                 className="h-full rounded-full"
                 style={{
                   width: `${energyPercent}%`,
-                  background: C.gold,
+                  background: `linear-gradient(90deg, ${energyState.dim}, ${energyState.color})`,
                 }}
               />
             </div>

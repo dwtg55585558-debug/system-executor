@@ -8,7 +8,7 @@ import { C } from "../styles/theme.js";
 import { EMOTION_TAGS } from "../utils/constants.js";
 
 export default function JournalTab({ ctx }) {
-  const { day, updateDay, addExp, showToast } = ctx;
+  const { day, updateDay, addReward, showToast } = ctx;
   const existing = day.journal;
   const [q1, setQ1] = useState(existing ? existing.q1 : null);
   const [emotion, setEmotion] = useState(existing ? existing.emotion : null);
@@ -46,7 +46,7 @@ export default function JournalTab({ ctx }) {
       showToast("已更新 Journal", "info");
     } else {
       updateDay((d) => ({ ...d, journal: newJournal }));
-      addExp(20, "Decision Journal");
+      addReward({ exp: 20, label: "Decision Journal", statKey: "observation" });
       showToast("+20 EXP · 完成今日 Journal", "reward");
     }
   };

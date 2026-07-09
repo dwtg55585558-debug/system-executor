@@ -14,7 +14,7 @@ import {
 import { uid, detectRiskConditions } from "../utils/helpers.js";
 
 export default function PracticeTab({ ctx }) {
-  const { day, data, updateDay, addExp, adjustIntegrity, showToast, setBossCard } = ctx;
+  const { day, data, updateDay, addExp, addReward, adjustIntegrity, showToast, setBossCard } = ctx;
   const [goal, setGoal] = useState(day.identityStatement || "");
   const [editingId, setEditingId] = useState(null);
   const [symbol, setSymbol] = useState("");
@@ -37,14 +37,14 @@ export default function PracticeTab({ ctx }) {
 
   const completeChecklist = () => {
     updateDay((d) => ({ ...d, checklist_pass: true }));
-    addExp(20, "交易前 Checklist");
+    addReward({ exp: 20, label: "交易前 Checklist", statKey: "discipline" });
     showToast("+20 EXP · Checklist 通過", "reward");
   };
 
   const completeMorningPlan = () => {
     if (day.morning_plan) return;
     updateDay((d) => ({ ...d, morning_plan: true, identityStatement: goal }));
-    addExp(10, "晨間計畫");
+    addReward({ exp: 10, label: "晨間計畫", statKey: "focus" });
     showToast("+10 EXP · 晨間計畫", "reward");
   };
 
@@ -111,7 +111,7 @@ export default function PracticeTab({ ctx }) {
       newTrades[idx] = finalTrade;
       updateDay((d) => ({ ...d, trades: newTrades }));
       if (finalTrade.followed_checklist && !old.followed_checklist && !otherFollowedExists) {
-        addExp(40, "符合策略進場");
+        addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
         showToast("+40 EXP · 符合策略進場", "reward");
       } else {
         showToast("已更新交易", "info");
@@ -120,7 +120,7 @@ export default function PracticeTab({ ctx }) {
       const alreadyAwarded = day.trades.some((t) => t.followed_checklist);
       updateDay((d) => ({ ...d, trades: [...d.trades, tradeData] }));
       if (tradeData.followed_checklist && !alreadyAwarded) {
-        addExp(40, "符合策略進場");
+        addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
         showToast("+40 EXP · 符合策略進場", "reward");
       } else {
         showToast("已記錄交易", "info");
@@ -158,7 +158,7 @@ export default function PracticeTab({ ctx }) {
   const logSuccessfulWait = () => {
     if (day.successful_wait) return;
     updateDay((d) => ({ ...d, successful_wait: true }));
-    addExp(50, "成功等待");
+    addReward({ exp: 50, label: "成功等待", statKey: "discipline" });
     showToast("今天你戰勝的不是市場,是想交易的衝動。+50 EXP", "reward");
   };
 

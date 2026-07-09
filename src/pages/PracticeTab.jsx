@@ -551,7 +551,7 @@ export default function PracticeTab({ ctx }) {
         />
       )}
 
-      {riskCheck && <SystemCheckModal riskCheck={riskCheck} onRespond={respondRiskCheck} />}
+      {riskCheck && <SystemCheckModal riskCheck={riskCheck} onRespond={respondRiskCheck} onClose={() => setRiskCheck(null)} />}
     </div>
   );
 }

@@ -1,15 +1,17 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   AlertTriangle,
   BookOpen,
   Check,
   CircleDot,
   Dumbbell,
+  Pencil,
   ScrollText,
   Shield,
   Target,
 } from "lucide-react";
 import Card from "../components/Card.jsx";
+import CultivatorNameModal from "../components/CultivatorNameModal.jsx";
 import { C, FONT_DISPLAY, FONT_MONO } from "../styles/theme.js";
 import { QUOTES, JOURNAL_GAP_WARNING } from "../utils/constants.js";
 import { journalGapDays } from "../utils/helpers.js";
@@ -17,7 +19,8 @@ import { titleForLevel } from "../utils/levels.js";
 import executorApprentice from "../assets/characters/executor-apprentice.png";
 
 export default function HomeTab({ ctx }) {
-  const { day, addReward, updateDay, showToast, data, lvl } = ctx;
+  const { day, addReward, updateDay, showToast, updateIdentityName, data, lvl } = ctx;
+  const [editingName, setEditingName] = useState(false);
   const quote = QUOTES[new Date().getDate() % QUOTES.length];
 
   const manualTasks = [
@@ -49,6 +52,7 @@ export default function HomeTab({ ctx }) {
   const questPct = Math.round((completedQuestCount / checklistRows.length) * 100);
   const expPct = lvl.expToNext ? Math.round((lvl.expInto / lvl.expToNext) * 100) : 100;
   const rankTitle = titleForLevel(lvl.level);
+  const cultivatorName = data.identity.name?.trim() || "執行者";
   const characterStats = data.identity.stats;
   const hexAttributes = [
     { key: "focus", label: "專注", value: characterStats.focus },
@@ -172,6 +176,42 @@ export default function HomeTab({ ctx }) {
                 <div style={{ color: C.gold, fontSize: 12, fontWeight: 700 }}>{rankTitle}</div>
                 <div style={{ color: C.textFaint, fontSize: 10, marginTop: 1 }}>System Executor</div>
               </div>
+            </div>
+
+            <div className="mt-3 flex items-center gap-2 min-w-0">
+              <div className="min-w-0 flex-1">
+                <div style={{ color: C.textFaint, fontFamily: FONT_MONO, fontSize: 10 }}>修煉者名稱</div>
+                <div
+                  style={{
+                    color: C.text,
+                    fontFamily: FONT_DISPLAY,
+                    fontSize: 19,
+                    lineHeight: 1.2,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {cultivatorName}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingName(true)}
+                aria-label="更改名稱"
+                title="更改名稱"
+                className="shrink-0 flex items-center justify-center"
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  border: `1px solid rgba(203,163,95,0.26)`,
+                  background: "rgba(203,163,95,0.08)",
+                  color: C.gold,
+                }}
+              >
+                <Pencil size={15} />
+              </button>
             </div>
 
             <div
@@ -427,6 +467,17 @@ export default function HomeTab({ ctx }) {
           </div>
         </div>
       </Card>
+
+      {editingName && (
+        <CultivatorNameModal
+          initialName={cultivatorName}
+          onSave={(name) => {
+            updateIdentityName(name);
+            setEditingName(false);
+          }}
+          onCancel={() => setEditingName(false)}
+        />
+      )}
     </div>
   );
 }

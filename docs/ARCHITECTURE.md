@@ -43,16 +43,18 @@ src/
 3. `App.jsx` calls `useAppState(showToast)`.
 4. `useAppState` loads saved state from `localStorage`, performs light migration for older day records, ensures today exists, computes stats and level, checks achievements, and returns the current app context.
 5. If app state is loading, `App` renders a loading screen.
-6. If today has not completed `calibration_done`, `App` renders `MorningCalibration`.
-7. Otherwise, `App` renders one of five page components based on the selected tab:
+6. If `data.identity.name` is missing or blank, `App` renders the first-time cultivator naming overlay.
+7. `App` renders one of five page components based on the selected tab:
    - `HomeTab`
    - `PracticeTab`
    - `JournalTab`
    - `SystemTab`
    - `InsightTab`
-8. `App` renders shared overlays outside the active page:
+8. On every app load, `App` renders `MorningCalibration` as a startup overlay until the user confirms calibration.
+9. `App` renders shared overlays outside the active page:
    - `BottomNav`
    - `Toast`
+   - `MorningCalibration`
    - `BossCardOverlay`
    - `AchievementModal`
    - `DayDetailModal`
@@ -64,6 +66,7 @@ The persisted root state is created by `defaultState()` in `src/utils/helpers.js
 ```text
 state
   identity
+    name
     totalExp
     integrity
     energy
@@ -94,6 +97,8 @@ state
 
 The active day is derived with `todayStr()` and read as `data.history[today]`. If a missing day is detected, `useAppState` inserts `emptyDay(today)`.
 
+`identity.name` is the cultivator display name shown on the Home character card. New default state leaves it empty so first-time users must create an identity name. Older saved states without `identity.name` are migrated to `執行者`.
+
 `identity.energy` is daily trading decision energy. `maxEnergy` is fixed at 40. On app load, missing energy fields are migrated, and a stale `energyDate` resets energy to 40 for the current date. Same-day loads preserve the existing energy value, including negative values.
 
 ### Persistence
@@ -108,6 +113,7 @@ The active day is derived with `todayStr()` and read as `data.history[today]`. I
 
 - `addExp(amount, label)`
 - `adjustIntegrity(delta)`
+- `updateIdentityName(name)`
 - `spendEnergy(amount)`
 - `updateDay(mutator)`
 - `updateHistoryDay(date, mutator)`

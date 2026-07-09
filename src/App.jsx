@@ -8,6 +8,7 @@ import BossCardOverlay from "./components/BossCardOverlay.jsx";
 import AchievementModal from "./components/AchievementModal.jsx";
 import DayDetailModal from "./components/DayDetailModal.jsx";
 import MorningCalibration from "./components/MorningCalibration.jsx";
+import CultivatorNameModal from "./components/CultivatorNameModal.jsx";
 import HomeTab from "./pages/HomeTab.jsx";
 import PracticeTab from "./pages/PracticeTab.jsx";
 import JournalTab from "./pages/JournalTab.jsx";
@@ -19,6 +20,7 @@ export default function App() {
   const [tab, setTab] = useState("home");
   const [bossCard, setBossCard] = useState(null);
   const [reviewDate, setReviewDate] = useState(null);
+  const [showCalibration, setShowCalibration] = useState(true);
   const { toast, showToast } = useToast();
   const {
     loading,
@@ -30,6 +32,7 @@ export default function App() {
     addExp,
     addReward,
     adjustIntegrity,
+    updateIdentityName,
     spendEnergy,
     updateDay,
     updateHistoryDay,
@@ -62,13 +65,16 @@ export default function App() {
     spendEnergy,
     updateDay,
     showToast,
+    updateIdentityName,
     setBossCard,
     setReviewDate,
     updateHistoryDay,
   };
 
-  if (!day.calibration_done) {
-    return <MorningCalibration onContinue={() => updateDay((d) => ({ ...d, calibration_done: true }))} />;
+  const needsNameSetup = !data.identity.name || data.identity.name.trim() === "";
+
+  if (needsNameSetup) {
+    return <CultivatorNameModal onSave={updateIdentityName} />;
   }
 
   return (
@@ -84,6 +90,7 @@ export default function App() {
       <BottomNav tab={tab} setTab={setTab} />
 
       {toast && <Toast toast={toast} />}
+      {showCalibration && <MorningCalibration onContinue={() => setShowCalibration(false)} />}
       {bossCard && <BossCardOverlay boss={bossCard} onClose={() => setBossCard(null)} />}
       {unlockedAchievement && <AchievementModal achievement={unlockedAchievement} onClose={clearUnlockedAchievement} />}
       {reviewDate && data.history[reviewDate] && (

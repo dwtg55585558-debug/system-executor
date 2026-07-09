@@ -13,6 +13,7 @@ function migrateIdentity(identity = {}, today = todayStr()) {
 
   return {
     ...identity,
+    name: identity.name ?? "執行者",
     totalExp: identity.totalExp ?? 0,
     integrity: identity.integrity ?? 100,
     energy,
@@ -150,6 +151,16 @@ export function useAppState(showToast) {
     [today]
   );
 
+  const updateIdentityName = useCallback((name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return false;
+    setData((prev) => ({
+      ...prev,
+      identity: { ...prev.identity, name: trimmed },
+    }));
+    return true;
+  }, []);
+
   const spendEnergy = useCallback(
     (amount) => {
       setData((prev) => {
@@ -201,6 +212,7 @@ export function useAppState(showToast) {
     addExp,
     addReward,
     adjustIntegrity,
+    updateIdentityName,
     spendEnergy,
     updateDay,
     updateHistoryDay,

@@ -67,6 +67,7 @@ Stored at `data.identity`.
 Fields:
 
 - `totalExp`
+- `name`
 - `integrity`
 - `energy`
 - `maxEnergy`
@@ -75,6 +76,7 @@ Fields:
 Mutations:
 
 - `addExp(amount, label)`
+- `updateIdentityName(name)`
 - `adjustIntegrity(delta)`
 - `spendEnergy(amount)`
 
@@ -109,21 +111,24 @@ Fields:
 
 ## Feature Areas
 
-## Morning Calibration
+## Startup Identity And Calibration
 
 Files:
 
 - `src/App.jsx`
 - `src/components/MorningCalibration.jsx`
+- `src/components/CultivatorNameModal.jsx`
 
 Purpose:
 
-- Show a daily identity prompt before the main app.
-- Mark `day.calibration_done` as true after continuing.
+- If `data.identity.name` is missing or blank, show the first-time cultivator naming overlay before the app.
+- Save the trimmed name through `updateIdentityName`, changing only `identity.name`.
+- On every app load, show a random cultivation calibration message before normal interaction.
 
 Notes:
 
-- Old historical days are migrated with `calibration_done: true` so users are not forced through calibration retroactively.
+- Older saved states without `identity.name` are migrated to `執行者`.
+- The startup calibration is app-load based, not daily-session based.
 
 ## Home
 

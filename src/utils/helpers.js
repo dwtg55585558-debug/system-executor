@@ -41,6 +41,7 @@ export function defaultState() {
 
   return {
     identity: {
+      name: "",
       totalExp: 0,
       integrity: 100,
       energy: 40,

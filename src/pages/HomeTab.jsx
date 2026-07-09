@@ -30,6 +30,7 @@ export default function HomeTab({ ctx }) {
   ];
 
   const followedToday = day.trades.some((t) => t.followed_checklist);
+  const stopLossMode = !!day.stopLossMode;
   const gapDays = journalGapDays(data.history);
 
   const checklistRows = [
@@ -42,7 +43,14 @@ export default function HomeTab({ ctx }) {
       manual: true,
     })),
     { key: "checklist_pass", label: "交易前 Checklist", exp: 20, done: day.checklist_pass, manual: false },
-    { key: "followed", label: "有符合策略才進場", exp: 40, done: followedToday, manual: false },
+    {
+      key: "followed",
+      label: "有符合策略才進場",
+      exp: stopLossMode ? null : 40,
+      done: followedToday,
+      manual: false,
+      note: stopLossMode ? "止血模式：今日暫停新增交易獎勵" : null,
+    },
     { key: "wait", label: "沒有機會、成功等待", exp: 50, done: day.successful_wait, manual: false },
     { key: "stoploss", label: "完整停損", exp: null, done: day.trades.some((t) => t.stop_loss_set), manual: false },
     { key: "journal", label: "完成 Decision Journal", exp: 20, done: !!day.journal, manual: false },
@@ -97,6 +105,12 @@ export default function HomeTab({ ctx }) {
     updateDay((d) => ({ ...d, [id]: true }));
     addReward({ exp, label, statKey });
     showToast(rewardToastByTask[id], "reward");
+  };
+
+  const enterStopLossMode = () => {
+    if (stopLossMode) return;
+    updateDay((d) => ({ ...d, stopLossMode: true }));
+    showToast("已進入止血模式｜今日只允許復盤與停止", "info");
   };
 
   const questIcon = (row) => {
@@ -313,6 +327,36 @@ export default function HomeTab({ ctx }) {
         </Card>
       )}
 
+      {stopLossMode && (
+        <Card
+          className="mt-3"
+          style={{
+            borderColor: "rgba(185,87,79,0.72)",
+            background:
+              "linear-gradient(135deg, rgba(90,54,52,0.34), rgba(27,29,36,0.82)), radial-gradient(circle at 12% 0%, rgba(209,154,66,0.16), transparent 34%)",
+            boxShadow: "inset 0 1px 0 rgba(209,154,66,0.08)",
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle size={18} color={C.ash} className="mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <div style={{ color: C.ash, fontFamily: FONT_DISPLAY, fontSize: 17, letterSpacing: 0.5 }}>
+                止血模式
+              </div>
+              <div style={{ color: C.text, fontSize: 13.5, lineHeight: 1.55, marginTop: 5 }}>
+                今天不再修煉進攻，只修煉停止。
+              </div>
+              <div style={{ color: C.textDim, fontSize: 12, lineHeight: 1.55, marginTop: 8 }}>
+                允許：復盤、日誌、閱讀、健身
+              </div>
+              <div style={{ color: C.textDim, fontSize: 12, lineHeight: 1.55 }}>
+                暫停：新增交易任務獎勵、追單、補回虧損
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <div
         className="mt-5 mb-2"
         style={{ fontFamily: FONT_DISPLAY, fontSize: 17, color: C.text, letterSpacing: 0.5 }}
@@ -356,6 +400,11 @@ export default function HomeTab({ ctx }) {
                   <div style={{ color: row.done ? C.sage : C.gold, fontFamily: FONT_MONO, fontSize: 11, marginTop: 3 }}>
                     {row.exp !== null ? `+${row.exp} EXP` : "SYSTEM RECORD"}
                   </div>
+                  {row.note && (
+                    <div style={{ color: C.ash, fontSize: 11.5, lineHeight: 1.45, marginTop: 4 }}>
+                      {row.note}
+                    </div>
+                  )}
                   {isMorningCalibration && !row.done && (
                     <div className="mt-3" style={{ maxWidth: 430 }}>
                       <div style={{ color: C.textDim, fontSize: 12.5, lineHeight: 1.5 }}>
@@ -473,6 +522,37 @@ export default function HomeTab({ ctx }) {
           </div>
         </Card>
       </div>
+
+      {!stopLossMode && (
+        <Card
+          className="mt-3"
+          style={{
+            borderColor: "rgba(185,87,79,0.42)",
+            background: "linear-gradient(135deg, rgba(90,54,52,0.18), rgba(19,20,25,0.9))",
+            padding: 12,
+          }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div style={{ color: C.textDim, fontSize: 12.5, lineHeight: 1.45 }}>
+                情緒交易、追單或害怕失去帳號時，切換為停止與復盤。
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={enterStopLossMode}
+              className="shrink-0 rounded-lg px-3 py-2 text-xs font-medium"
+              style={{
+                background: "rgba(90,54,52,0.42)",
+                border: `1px solid rgba(185,87,79,0.56)`,
+                color: C.text,
+              }}
+            >
+              進入止血模式
+            </button>
+          </div>
+        </Card>
+      )}
 
       <Card
         className="mt-3"

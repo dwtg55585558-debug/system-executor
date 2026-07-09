@@ -43,7 +43,7 @@ The sprint should be a presentation and information-architecture upgrade, not a 
 - Keep the journal gap warning behavior exactly as-is: only show it when `journalGapDays(data.history) >= JOURNAL_GAP_WARNING` and today's journal is missing.
 - Evolve "Daily Quest" into a Training Quest checklist without changing the underlying row completion conditions or EXP values.
 - Make manual tasks feel like selectable training drills, but retain the current one-time completion behavior for:
-  - morning plan: +10 EXP
+  - morning calibration: +10 EXP
   - workout: +20 EXP
   - reading: +20 EXP
 - Preserve the final nudge that sends users to Practice/Training for checklist, trade logging, or successful waiting, but update the language to match the Training Hall framing if the tab label remains unchanged.
@@ -295,7 +295,7 @@ This sprint should remain local-first and presentational. It should not introduc
      - Discipline: today's quest completion ratio.
      - Integrity: existing integrity value.
      - Patience: successful waiting signal where available.
-     - Preparation: checklist/morning plan completion.
+     - Preparation: checklist/morning calibration completion.
      - Reflection: journal completion or journal-gap state.
 4. Training quests
    - Keep current quest checklist visible and behaviorally unchanged.

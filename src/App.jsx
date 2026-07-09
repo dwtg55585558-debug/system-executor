@@ -65,6 +65,7 @@ export default function App() {
     spendEnergy,
     updateDay,
     showToast,
+    setTab,
     updateIdentityName,
     setBossCard,
     setReviewDate,

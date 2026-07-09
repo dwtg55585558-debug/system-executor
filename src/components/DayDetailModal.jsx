@@ -15,7 +15,7 @@ export default function DayDetailModal({ date, session, expLog, integrityLog, on
       ? dayIntegrityPoints[dayIntegrityPoints.length - 1].value - dayIntegrityPoints[0].value
       : null;
   const rows = [
-    ["晨間計畫", session.morning_plan ? "完成" : "—"],
+    ["晨間校準", session.morning_plan ? "完成" : "—"],
     ["健身", session.workout ? "完成" : "—"],
     ["閱讀", session.reading ? "完成" : "—"],
     ["Checklist", session.checklist_pass ? "完成" : "—"],

@@ -46,6 +46,7 @@ export function useAppState(showToast) {
             if (!t.id) t.id = uid();
           });
           if (!s.riskEvents) s.riskEvents = [];
+          if (s.stopLossMode === undefined) s.stopLossMode = false;
           if (s.eveningReflection === undefined) s.eveningReflection = null;
           if (s.calibration_done === undefined) s.calibration_done = true; // don't retroactively force calibration on old days
           if (s.aiMentor === undefined) s.aiMentor = null;

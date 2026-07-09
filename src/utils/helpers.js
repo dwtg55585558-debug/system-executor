@@ -26,6 +26,7 @@ export function emptyDay(date) {
     checklist_pass: false,
     checklistChecks: {},
     trades: [],
+    stopLossMode: false,
     successful_wait: false,
     violations: [],
     bossResists: [],

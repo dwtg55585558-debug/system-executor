@@ -36,6 +36,7 @@ export default function PracticeTab({ ctx }) {
     { id: "energy_boundary", label: "今天 Energy 歸零後，不再新增交易" },
   ];
   const allCalibrationChecked = morningCalibrationItems.every((item) => calibrationChecks[item.id] || day.morning_plan);
+  const stopLossMode = !!day.stopLossMode;
 
   const allChecked = CHECKLIST_ITEMS.every((c) => day.checklistChecks[c.id]);
 
@@ -125,8 +126,12 @@ export default function PracticeTab({ ctx }) {
       newTrades[idx] = finalTrade;
       updateDay((d) => ({ ...d, trades: newTrades }));
       if (finalTrade.followed_checklist && !old.followed_checklist && !otherFollowedExists) {
-        addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
-        showToast("符合策略交易｜EXP +40｜執行 +1", "reward");
+        if (stopLossMode) {
+          showToast("止血模式中｜今日不再獎勵新增交易", "info");
+        } else {
+          addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
+          showToast("符合策略交易｜EXP +40｜執行 +1", "reward");
+        }
       } else {
         showToast("已更新交易", "info");
       }
@@ -135,8 +140,12 @@ export default function PracticeTab({ ctx }) {
       updateDay((d) => ({ ...d, trades: [...d.trades, tradeData] }));
       spendEnergy(10);
       if (tradeData.followed_checklist && !alreadyAwarded) {
-        addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
-        showToast("符合策略交易｜EXP +40｜執行 +1", "reward");
+        if (stopLossMode) {
+          showToast("止血模式中｜今日不再獎勵新增交易", "info");
+        } else {
+          addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
+          showToast("符合策略交易｜EXP +40｜執行 +1", "reward");
+        }
       } else {
         showToast("已記錄交易", "info");
       }

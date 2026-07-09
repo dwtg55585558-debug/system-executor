@@ -19,12 +19,12 @@ import { titleForLevel } from "../utils/levels.js";
 import executorApprentice from "../assets/characters/executor-apprentice.png";
 
 export default function HomeTab({ ctx }) {
-  const { day, addReward, updateDay, showToast, updateIdentityName, data, lvl } = ctx;
+  const { day, addReward, updateDay, showToast, setTab, updateIdentityName, data, lvl } = ctx;
   const [editingName, setEditingName] = useState(false);
   const quote = QUOTES[new Date().getDate() % QUOTES.length];
 
   const manualTasks = [
-    { id: "morning_plan", label: "晨間計畫", exp: 10, statKey: "focus" },
+    { id: "morning_plan", label: "晨間校準", exp: 10, statKey: "focus" },
     { id: "workout", label: "健身", exp: 20, statKey: "mindset" },
     { id: "reading", label: "閱讀", exp: 20, statKey: "insight" },
   ];
@@ -91,7 +91,6 @@ export default function HomeTab({ ctx }) {
   const toggleManual = (id, exp, label, statKey) => {
     if (day[id]) return;
     const rewardToastByTask = {
-      morning_plan: "晨間計畫完成｜EXP +10｜專注 +1",
       workout: "健身完成｜EXP +20｜心態 +1",
       reading: "閱讀完成｜EXP +20｜洞察 +1",
     };
@@ -322,58 +321,81 @@ export default function HomeTab({ ctx }) {
       </div>
 
       <Card style={{ borderColor: C.hair, background: "linear-gradient(180deg, #131419, #101116)", padding: 12 }}>
-        {checklistRows.slice(0, 5).map((row, i) => (
-          <div
-            key={row.key}
-            onClick={() => row.manual && !row.done && toggleManual(row.key, row.exp, row.label, row.statKey)}
-            className="flex items-center justify-between gap-3"
-            style={{
-              borderTop: i === 0 ? "none" : `1px solid rgba(42,44,54,0.78)`,
-              cursor: row.manual && !row.done ? "pointer" : "default",
-              padding: "12px 0",
-            }}
-          >
-            <div className="flex items-center gap-3 min-w-0">
+        {checklistRows.slice(0, 5).map((row, i) => {
+          const isMorningCalibration = row.key === "morning_plan";
+
+          return (
+            <div
+              key={row.key}
+              onClick={() => row.manual && !row.done && !isMorningCalibration && toggleManual(row.key, row.exp, row.label, row.statKey)}
+              className="flex items-start justify-between gap-3"
+              style={{
+                borderTop: i === 0 ? "none" : `1px solid rgba(42,44,54,0.78)`,
+                cursor: row.manual && !row.done && !isMorningCalibration ? "pointer" : "default",
+                padding: "12px 0",
+              }}
+            >
+              <div className="flex items-start gap-3 min-w-0">
+                <div
+                  className="flex items-center justify-center shrink-0"
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: "50%",
+                    background: row.done ? "rgba(62,90,73,0.36)" : "rgba(203,163,95,0.08)",
+                    border: `1px solid ${row.done ? C.sage : C.goldDim}`,
+                    color: row.done ? C.sage : C.gold,
+                  }}
+                >
+                  {questIcon(row)}
+                </div>
+                <div className="min-w-0">
+                  <div style={{ color: row.done ? C.textDim : C.text, fontSize: 14, fontWeight: 700 }}>
+                    {row.label}
+                  </div>
+                  <div style={{ color: row.done ? C.sage : C.gold, fontFamily: FONT_MONO, fontSize: 11, marginTop: 3 }}>
+                    {row.exp !== null ? `+${row.exp} EXP` : "SYSTEM RECORD"}
+                  </div>
+                  {isMorningCalibration && !row.done && (
+                    <div className="mt-3" style={{ maxWidth: 430 }}>
+                      <div style={{ color: C.textDim, fontSize: 12.5, lineHeight: 1.5 }}>
+                        尚未完成晨間校準
+                      </div>
+                      <div style={{ color: C.textFaint, fontSize: 12, lineHeight: 1.5, marginTop: 2 }}>
+                        請先到修煉頁完成今日交易邊界設定
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setTab("practice")}
+                        className="mt-3 rounded-lg px-4 py-2 text-sm font-medium"
+                        style={{ background: C.goldDim, color: C.text }}
+                      >
+                        前往修煉
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div
                 className="flex items-center justify-center shrink-0"
                 style={{
-                  width: 40,
-                  height: 40,
+                  width: 34,
+                  height: 34,
                   borderRadius: "50%",
-                  background: row.done ? "rgba(62,90,73,0.36)" : "rgba(203,163,95,0.08)",
-                  border: `1px solid ${row.done ? C.sage : C.goldDim}`,
-                  color: row.done ? C.sage : C.gold,
+                  background: row.done ? "rgba(62,90,73,0.72)" : "rgba(10,11,14,0.4)",
+                  border: `1px solid ${row.done ? C.sage : C.hair}`,
+                  color: row.done ? C.text : C.textFaint,
+                  fontFamily: FONT_MONO,
+                  fontSize: 12,
                 }}
               >
-                {questIcon(row)}
-              </div>
-              <div className="min-w-0">
-                <div style={{ color: row.done ? C.textDim : C.text, fontSize: 14, fontWeight: 700 }}>
-                  {row.label}
-                </div>
-                <div style={{ color: row.done ? C.sage : C.gold, fontFamily: FONT_MONO, fontSize: 11, marginTop: 3 }}>
-                  {row.exp !== null ? `+${row.exp} EXP` : "SYSTEM RECORD"}
-                </div>
+                {row.done ? <Check size={18} strokeWidth={3} /> : row.manual ? "" : "0/1"}
               </div>
             </div>
-
-            <div
-              className="flex items-center justify-center shrink-0"
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: "50%",
-                background: row.done ? "rgba(62,90,73,0.72)" : "rgba(10,11,14,0.4)",
-                border: `1px solid ${row.done ? C.sage : C.hair}`,
-                color: row.done ? C.text : C.textFaint,
-                fontFamily: FONT_MONO,
-                fontSize: 12,
-              }}
-            >
-              {row.done ? <Check size={18} strokeWidth={3} /> : row.manual ? "" : "0/1"}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </Card>
 
       <div

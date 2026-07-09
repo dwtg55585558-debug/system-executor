@@ -134,13 +134,13 @@ Home is the daily dashboard. It renders:
 - journal gap warning
 - daily quest checklist
 
-It derives completion state from today's day object. Manual task completion for morning plan, workout, and reading is handled inline and awards EXP directly from the page.
+It derives completion state from today's day object. Home shows morning calibration as a status summary and routes incomplete users to Practice. Manual task completion for workout and reading is handled inline and awards EXP directly from the page.
 
 ### `PracticeTab`
 
 Practice is the largest feature module. It owns:
 
-- morning plan input and completion
+- morning calibration input, boundary checks, reminder, and completion
 - pre-trade checklist toggles and completion
 - trade form local state
 - trade creation and editing
@@ -281,8 +281,8 @@ Owns localStorage read/write/delete.
 
 EXP and integrity rules are currently distributed across feature pages:
 
-- manual daily task rewards in `HomeTab`
-- checklist, morning plan, followed-strategy, waiting, boss resistance, and violation rules in `PracticeTab`
+- workout and reading daily task rewards in `HomeTab`
+- checklist, morning calibration, followed-strategy, waiting, boss resistance, and violation rules in `PracticeTab`
 - journal completion reward in `JournalTab`
 
 The state hook provides `addExp` and `adjustIntegrity`, but the domain rules deciding when and why to call them live in pages.
@@ -396,7 +396,7 @@ src/
 ### Priority Refactors
 
 1. Extract domain commands for user actions:
-   - complete morning plan
+   - complete morning calibration
    - complete checklist
    - add/update trade
    - log successful wait

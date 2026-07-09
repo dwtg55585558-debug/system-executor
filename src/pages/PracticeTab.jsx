@@ -15,7 +15,6 @@ import { uid, detectRiskConditions } from "../utils/helpers.js";
 
 export default function PracticeTab({ ctx }) {
   const { day, data, updateDay, addExp, addReward, adjustIntegrity, spendEnergy, showToast, setBossCard } = ctx;
-  const [goal, setGoal] = useState(day.identityStatement || "");
   const [editingId, setEditingId] = useState(null);
   const [symbol, setSymbol] = useState("");
   const [direction, setDirection] = useState("long");
@@ -27,6 +26,16 @@ export default function PracticeTab({ ctx }) {
   const [pnl, setPnl] = useState("");
   const [confirmViolation, setConfirmViolation] = useState(null);
   const [riskCheck, setRiskCheck] = useState(null);
+  const [calibrationChecks, setCalibrationChecks] = useState({});
+  const executionGoal = "只在符合系統時進場";
+
+  const morningCalibrationItems = [
+    { id: "process_goal", label: "今天不以賺錢為目標，只以執行系統為目標" },
+    { id: "a_plus_only", label: "今天只做 A+ 機會，沒有就等待" },
+    { id: "emotional_stop", label: "今天若出現急躁、想補回、想證明自己，立刻停手" },
+    { id: "energy_boundary", label: "今天 Energy 歸零後，不再新增交易" },
+  ];
+  const allCalibrationChecked = morningCalibrationItems.every((item) => calibrationChecks[item.id] || day.morning_plan);
 
   const allChecked = CHECKLIST_ITEMS.every((c) => day.checklistChecks[c.id]);
 
@@ -42,10 +51,15 @@ export default function PracticeTab({ ctx }) {
   };
 
   const completeMorningPlan = () => {
+    if (day.morning_plan || !allCalibrationChecked) return;
+    updateDay((d) => ({ ...d, morning_plan: true, identityStatement: executionGoal }));
+    addReward({ exp: 10, label: "晨間校準", statKey: "focus" });
+    showToast("晨間校準完成｜EXP +10｜專注 +1", "reward");
+  };
+
+  const toggleCalibrationCheck = (id) => {
     if (day.morning_plan) return;
-    updateDay((d) => ({ ...d, morning_plan: true, identityStatement: goal }));
-    addReward({ exp: 10, label: "晨間計畫", statKey: "focus" });
-    showToast("晨間計畫完成｜EXP +10｜專注 +1", "reward");
+    setCalibrationChecks((checks) => ({ ...checks, [id]: !checks[id] }));
   };
 
   const resetForm = () => {
@@ -184,27 +198,71 @@ export default function PracticeTab({ ctx }) {
         修練
       </div>
 
-      <SectionLabel>晨間計畫</SectionLabel>
+      <SectionLabel>晨間校準</SectionLabel>
       <Card>
         <div style={{ fontSize: 12, color: C.textFaint }} className="mb-1.5">
-          今天的唯一目標
+          今日唯一執行目標
         </div>
-        <input
-          disabled={day.morning_plan}
-          value={goal}
-          onChange={(e) => setGoal(e.target.value)}
-          maxLength={60}
-          placeholder="例如:只在符合系統時進場"
-          className="w-full rounded-lg px-3 py-2 text-sm outline-none mb-3"
-          style={{ background: C.raised, color: C.text, border: `1px solid ${C.hair}` }}
-        />
+        <div
+          className="mb-3 rounded-lg px-3 py-2 text-sm"
+          style={{
+            background: "rgba(203,163,95,0.08)",
+            color: C.text,
+            border: `1px solid rgba(203,163,95,0.22)`,
+            fontWeight: 700,
+          }}
+        >
+          {executionGoal}
+        </div>
+        <div style={{ display: "grid", gap: 8 }} className="mb-3">
+          {morningCalibrationItems.map((item) => {
+            const checked = calibrationChecks[item.id] || day.morning_plan;
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                disabled={day.morning_plan}
+                onClick={() => toggleCalibrationCheck(item.id)}
+                className="flex items-start gap-2.5 rounded-lg p-2 text-left"
+                style={{
+                  minHeight: 40,
+                  background: "rgba(10,11,14,0.42)",
+                  border: `1px solid ${checked ? "rgba(107,154,126,0.5)" : C.hair}`,
+                  color: checked ? C.text : C.textDim,
+                  cursor: day.morning_plan ? "default" : "pointer",
+                }}
+              >
+                <span
+                  className="flex items-center justify-center shrink-0"
+                  style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: 5,
+                    background: "transparent",
+                    border: `1.5px solid ${checked ? C.sage : C.textFaint}`,
+                    color: C.sage,
+                    fontSize: 11,
+                    lineHeight: 1,
+                  }}
+                >
+                  {checked && "✓"}
+                </span>
+                <span style={{ fontSize: 12.5, lineHeight: 1.45 }}>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
         <button
-          disabled={day.morning_plan}
+          disabled={day.morning_plan || !allCalibrationChecked}
           onClick={completeMorningPlan}
           className="w-full rounded-lg py-2 text-sm font-medium"
-          style={{ background: day.morning_plan ? C.raised : C.violetDim, color: day.morning_plan ? C.textFaint : C.text }}
+          style={{
+            background: day.morning_plan ? C.raised : allCalibrationChecked ? C.violetDim : C.raised,
+            color: day.morning_plan ? C.textFaint : allCalibrationChecked ? C.text : C.textFaint,
+          }}
         >
-          {day.morning_plan ? "已完成" : "確認今日身份"}
+          {day.morning_plan ? "已完成" : "完成晨間校準"}
         </button>
       </Card>
 

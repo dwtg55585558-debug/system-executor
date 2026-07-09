@@ -145,9 +145,10 @@ Inputs:
 - `ctx.day`
 - `ctx.data`
 - `ctx.today`
-- `ctx.addExp`
+- `ctx.addReward`
 - `ctx.updateDay`
 - `ctx.showToast`
+- `ctx.setTab`
 
 Features:
 
@@ -155,8 +156,11 @@ Features:
 - Daily quote from `QUOTES`.
 - Journal gap warning using `journalGapDays`.
 - Daily quest checklist.
+- Morning calibration status summary:
+  - reads `day.morning_plan`
+  - links incomplete users to Practice
+  - does not complete calibration or award EXP from Home
 - Manual task completion:
-  - morning plan: +10 EXP
   - workout: +20 EXP
   - reading: +20 EXP
 - Derived checklist state for:
@@ -168,7 +172,7 @@ Features:
 
 Duplicated Responsibilities:
 
-- Manual task rewards overlap conceptually with Practice's reward behavior.
+- Workout and reading rewards are completed from Home; morning calibration is completed from Practice.
 - Daily quest completion is derived inline rather than through a selector.
 
 ## Practice
@@ -204,7 +208,7 @@ Features:
 - Boss resistance logging.
 - Violation logging.
 
-### Morning Plan
+### Morning Calibration
 
 State:
 
@@ -634,7 +638,8 @@ Feature-specific components:
 | Achievement definitions | `constants.ACHIEVEMENTS` |
 | Journal gap | `helpers.journalGapDays` |
 | Risk detection | `helpers.detectRiskConditions` |
-| Morning/workout/reading rewards | `HomeTab` |
+| Morning calibration reward | `PracticeTab` |
+| Workout/reading rewards | `HomeTab` |
 | Checklist reward | `PracticeTab` |
 | Followed-strategy trade reward | `PracticeTab` |
 | Successful wait reward | `PracticeTab` |

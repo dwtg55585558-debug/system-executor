@@ -14,6 +14,7 @@ import { C, FONT_DISPLAY, FONT_MONO } from "../styles/theme.js";
 import { QUOTES, JOURNAL_GAP_WARNING } from "../utils/constants.js";
 import { journalGapDays } from "../utils/helpers.js";
 import { titleForLevel } from "../utils/levels.js";
+import { initialCharacter } from "../data/character.js";
 import executorApprentice from "../assets/characters/executor-apprentice.png";
 
 export default function HomeTab({ ctx }) {
@@ -48,6 +49,14 @@ export default function HomeTab({ ctx }) {
   const questPct = Math.round((completedQuestCount / checklistRows.length) * 100);
   const expPct = lvl.expToNext ? Math.round((lvl.expInto / lvl.expToNext) * 100) : 100;
   const rankTitle = titleForLevel(lvl.level);
+  const hexAttributes = [
+    { key: "focus", label: "專注", value: initialCharacter.stats.focus },
+    { key: "discipline", label: "紀律", value: initialCharacter.stats.discipline },
+    { key: "mindset", label: "心態", value: initialCharacter.stats.mindset },
+    { key: "execution", label: "執行", value: initialCharacter.stats.execution },
+    { key: "observation", label: "觀察", value: initialCharacter.stats.observation },
+    { key: "insight", label: "洞察", value: initialCharacter.stats.insight },
+  ];
 
   const energy = Math.max(
     0,
@@ -174,6 +183,49 @@ export default function HomeTab({ ctx }) {
                 {lvl.expToNext ? `${lvl.expInto} / ${lvl.expToNext} XP` : "MAX"}
               </span>
             </div>
+          </div>
+        </div>
+
+        <div
+          className="mt-4"
+          style={{
+            border: `1px solid rgba(203,163,95,0.18)`,
+            background: "rgba(7,8,11,0.62)",
+            borderRadius: 13,
+            padding: 12,
+            boxShadow: "inset 0 1px 0 rgba(203,163,95,0.08)",
+          }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div style={{ color: C.gold, fontFamily: FONT_DISPLAY, fontSize: 14, letterSpacing: 0.5 }}>
+              六角屬性
+            </div>
+            <div style={{ color: C.textFaint, fontFamily: FONT_MONO, fontSize: 10 }}>
+              CORE STATS
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {hexAttributes.map((stat) => (
+              <div
+                key={stat.key}
+                className="flex items-center justify-between gap-2"
+                style={{
+                  minHeight: 38,
+                  border: `1px solid rgba(42,44,54,0.9)`,
+                  background: "linear-gradient(180deg, rgba(19,20,25,0.9), rgba(10,11,14,0.86))",
+                  borderRadius: 10,
+                  padding: "8px 10px",
+                }}
+              >
+                <span style={{ color: C.textDim, fontSize: 12, fontWeight: 700 }}>
+                  {stat.label}
+                </span>
+                <span style={{ color: C.gold, fontFamily: FONT_MONO, fontSize: 13 }}>
+                  {stat.value}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 

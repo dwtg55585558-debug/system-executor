@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import Card from "../components/Card.jsx";
 import SectionLabel from "../components/SectionLabel.jsx";
 import ToggleRow from "../components/ToggleRow.jsx";
@@ -15,6 +15,8 @@ import { uid, detectRiskConditions } from "../utils/helpers.js";
 
 export default function PracticeTab({ ctx }) {
   const { day, data, updateDay, addExp, addReward, adjustIntegrity, spendEnergy, showToast, setBossCard } = ctx;
+  const latestDayRef = useRef(day);
+  latestDayRef.current = day;
   const [editingId, setEditingId] = useState(null);
   const [symbol, setSymbol] = useState("");
   const [direction, setDirection] = useState("long");
@@ -36,8 +38,6 @@ export default function PracticeTab({ ctx }) {
     { id: "energy_boundary", label: "今天 Energy 歸零後，不再新增交易" },
   ];
   const allCalibrationChecked = morningCalibrationItems.every((item) => calibrationChecks[item.id] || day.morning_plan);
-  const stopLossMode = !!day.stopLossMode;
-
   const allChecked = CHECKLIST_ITEMS.every((c) => day.checklistChecks[c.id]);
 
   const toggleCheck = (id) => {
@@ -112,40 +112,50 @@ export default function PracticeTab({ ctx }) {
   };
 
   const commitTrade = (tradeData) => {
+    const latestDay = latestDayRef.current;
+
     if (editingId) {
-      const idx = day.trades.findIndex((t) => t.id === editingId);
-      const old = day.trades[idx];
+      const idx = latestDay.trades.findIndex((t) => t.id === editingId);
+      if (idx < 0) return;
+
+      const old = latestDay.trades[idx];
+      const otherFollowedExists = latestDay.trades.some((t, i) => i !== idx && t.followed_checklist);
+      const shouldAwardFollowed = tradeData.followed_checklist && !old.followed_checklist && !otherFollowedExists;
+
+      if (shouldAwardFollowed && latestDay.stopLossMode) {
+        showToast("止血模式中｜今日不再獎勵新增交易", "info");
+        return;
+      }
+
       const changes = diffTrade(old, tradeData);
       const finalTrade = {
         ...tradeData,
         edit_history: [...(old.edit_history || []), ...changes],
         edited_at: changes.length ? Date.now() : old.edited_at || null,
       };
-      const otherFollowedExists = day.trades.some((t, i) => i !== idx && t.followed_checklist);
-      const newTrades = [...day.trades];
+      const newTrades = [...latestDay.trades];
       newTrades[idx] = finalTrade;
       updateDay((d) => ({ ...d, trades: newTrades }));
-      if (finalTrade.followed_checklist && !old.followed_checklist && !otherFollowedExists) {
-        if (stopLossMode) {
-          showToast("止血模式中｜今日不再獎勵新增交易", "info");
-        } else {
-          addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
-          showToast("符合策略交易｜EXP +40｜執行 +1", "reward");
-        }
+      if (shouldAwardFollowed) {
+        addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
+        showToast("符合策略交易｜EXP +40｜執行 +1", "reward");
       } else {
         showToast("已更新交易", "info");
       }
     } else {
-      const alreadyAwarded = day.trades.some((t) => t.followed_checklist);
+      const alreadyAwarded = latestDay.trades.some((t) => t.followed_checklist);
+      const shouldAwardFollowed = tradeData.followed_checklist && !alreadyAwarded;
+
+      if (shouldAwardFollowed && latestDay.stopLossMode) {
+        showToast("止血模式中｜今日不再獎勵新增交易", "info");
+        return;
+      }
+
       updateDay((d) => ({ ...d, trades: [...d.trades, tradeData] }));
       spendEnergy(10);
-      if (tradeData.followed_checklist && !alreadyAwarded) {
-        if (stopLossMode) {
-          showToast("止血模式中｜今日不再獎勵新增交易", "info");
-        } else {
-          addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
-          showToast("符合策略交易｜EXP +40｜執行 +1", "reward");
-        }
+      if (shouldAwardFollowed) {
+        addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
+        showToast("符合策略交易｜EXP +40｜執行 +1", "reward");
       } else {
         showToast("已記錄交易", "info");
       }

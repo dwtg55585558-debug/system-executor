@@ -76,9 +76,14 @@ export default function HomeTab({ ctx }) {
 
   const toggleManual = (id, exp, label, statKey) => {
     if (day[id]) return;
+    const rewardToastByTask = {
+      morning_plan: "晨間計畫完成｜EXP +10｜專注 +1",
+      workout: "健身完成｜EXP +20｜心態 +1",
+      reading: "閱讀完成｜EXP +20｜洞察 +1",
+    };
     updateDay((d) => ({ ...d, [id]: true }));
     addReward({ exp, label, statKey });
-    showToast(`+${exp} EXP · ${label}`, "reward");
+    showToast(rewardToastByTask[id], "reward");
   };
 
   const questIcon = (row) => {

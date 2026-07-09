@@ -47,7 +47,7 @@ export default function JournalTab({ ctx }) {
     } else {
       updateDay((d) => ({ ...d, journal: newJournal }));
       addReward({ exp: 20, label: "Decision Journal", statKey: "observation" });
-      showToast("+20 EXP · 完成今日 Journal", "reward");
+      showToast("Decision Journal 完成｜EXP +20｜觀察 +1", "reward");
     }
   };
 

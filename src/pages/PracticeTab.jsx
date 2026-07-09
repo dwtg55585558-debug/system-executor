@@ -38,14 +38,14 @@ export default function PracticeTab({ ctx }) {
   const completeChecklist = () => {
     updateDay((d) => ({ ...d, checklist_pass: true }));
     addReward({ exp: 20, label: "交易前 Checklist", statKey: "discipline" });
-    showToast("+20 EXP · Checklist 通過", "reward");
+    showToast("交易前 Checklist 完成｜EXP +20｜紀律 +1", "reward");
   };
 
   const completeMorningPlan = () => {
     if (day.morning_plan) return;
     updateDay((d) => ({ ...d, morning_plan: true, identityStatement: goal }));
     addReward({ exp: 10, label: "晨間計畫", statKey: "focus" });
-    showToast("+10 EXP · 晨間計畫", "reward");
+    showToast("晨間計畫完成｜EXP +10｜專注 +1", "reward");
   };
 
   const resetForm = () => {
@@ -112,7 +112,7 @@ export default function PracticeTab({ ctx }) {
       updateDay((d) => ({ ...d, trades: newTrades }));
       if (finalTrade.followed_checklist && !old.followed_checklist && !otherFollowedExists) {
         addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
-        showToast("+40 EXP · 符合策略進場", "reward");
+        showToast("符合策略交易｜EXP +40｜執行 +1", "reward");
       } else {
         showToast("已更新交易", "info");
       }
@@ -121,7 +121,7 @@ export default function PracticeTab({ ctx }) {
       updateDay((d) => ({ ...d, trades: [...d.trades, tradeData] }));
       if (tradeData.followed_checklist && !alreadyAwarded) {
         addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
-        showToast("+40 EXP · 符合策略進場", "reward");
+        showToast("符合策略交易｜EXP +40｜執行 +1", "reward");
       } else {
         showToast("已記錄交易", "info");
       }
@@ -159,7 +159,7 @@ export default function PracticeTab({ ctx }) {
     if (day.successful_wait) return;
     updateDay((d) => ({ ...d, successful_wait: true }));
     addReward({ exp: 50, label: "成功等待", statKey: "discipline" });
-    showToast("今天你戰勝的不是市場,是想交易的衝動。+50 EXP", "reward");
+    showToast("成功等待完成｜EXP +50｜紀律 +1", "reward");
   };
 
   const resistBoss = (bossId) => {

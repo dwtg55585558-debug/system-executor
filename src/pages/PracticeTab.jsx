@@ -135,7 +135,7 @@ export default function PracticeTab({ ctx }) {
       };
       const newTrades = [...latestDay.trades];
       newTrades[idx] = finalTrade;
-      updateDay((d) => ({ ...d, trades: newTrades }));
+      updateDay((d) => ({ ...d, trades: newTrades, strategy_trade: d.strategy_trade || tradeData.followed_checklist }));
       if (shouldAwardFollowed) {
         addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
         showToast("符合策略交易｜EXP +40｜執行 +1", "reward");
@@ -151,7 +151,7 @@ export default function PracticeTab({ ctx }) {
         return;
       }
 
-      updateDay((d) => ({ ...d, trades: [...d.trades, tradeData] }));
+      updateDay((d) => ({ ...d, trades: [...d.trades, tradeData], strategy_trade: d.strategy_trade || tradeData.followed_checklist }));
       spendEnergy(10);
       if (shouldAwardFollowed) {
         addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
@@ -165,6 +165,12 @@ export default function PracticeTab({ ctx }) {
   };
 
   const respondRiskCheck = (response) => {
+    if (response === "following_system" && latestDayRef.current.stopLossMode) {
+      showToast("止血模式中｜今日不再獎勵新增交易", "info");
+      setRiskCheck(null);
+      return;
+    }
+
     updateDay((d) => ({ ...d, riskEvents: [...d.riskEvents, { reasons: riskCheck.reasons, response, ts: Date.now() }] }));
     commitTrade(riskCheck.trade);
     if (response === "emotionally_driven") {

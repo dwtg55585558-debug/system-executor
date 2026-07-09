@@ -29,7 +29,7 @@ export default function HomeTab({ ctx }) {
     { id: "reading", label: "閱讀", exp: 20, statKey: "insight" },
   ];
 
-  const followedToday = day.trades.some((t) => t.followed_checklist);
+  const followedToday = day.strategy_trade === false ? false : day.trades.some((t) => t.followed_checklist);
   const stopLossMode = !!day.stopLossMode;
   const gapDays = journalGapDays(data.history);
 
@@ -111,6 +111,27 @@ export default function HomeTab({ ctx }) {
     if (stopLossMode) return;
     updateDay((d) => ({ ...d, stopLossMode: true }));
     showToast("已進入止血模式｜今日只允許復盤與停止", "info");
+  };
+
+  const resetTodayState = () => {
+    const confirmed = window.confirm(
+      "確定要重置今日狀態嗎？這只會重置今日任務與止血模式，不會刪除角色、EXP、屬性或交易紀錄。"
+    );
+    if (!confirmed) return;
+
+    updateDay((d) => ({
+      ...d,
+      calibration_done: false,
+      morning_plan: false,
+      workout: false,
+      reading: false,
+      checklist_pass: false,
+      checklistChecks: {},
+      strategy_trade: false,
+      successful_wait: false,
+      stopLossMode: false,
+    }));
+    showToast("今日狀態已重置", "info");
   };
 
   const questIcon = (row) => {
@@ -569,6 +590,21 @@ export default function HomeTab({ ctx }) {
           </div>
         </div>
       </Card>
+
+      <div className="mt-5 mb-1 flex justify-center">
+        <button
+          type="button"
+          onClick={resetTodayState}
+          className="rounded-lg px-3 py-2 text-xs"
+          style={{
+            background: "transparent",
+            border: `1px solid rgba(126,130,142,0.28)`,
+            color: C.textFaint,
+          }}
+        >
+          重置今日狀態
+        </button>
+      </div>
 
       {editingName && (
         <CultivatorNameModal

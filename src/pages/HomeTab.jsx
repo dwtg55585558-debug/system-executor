@@ -14,17 +14,16 @@ import { C, FONT_DISPLAY, FONT_MONO } from "../styles/theme.js";
 import { QUOTES, JOURNAL_GAP_WARNING } from "../utils/constants.js";
 import { journalGapDays } from "../utils/helpers.js";
 import { titleForLevel } from "../utils/levels.js";
-import { initialCharacter } from "../data/character.js";
 import executorApprentice from "../assets/characters/executor-apprentice.png";
 
 export default function HomeTab({ ctx }) {
-  const { day, addExp, updateDay, showToast, data, lvl } = ctx;
+  const { day, addReward, updateDay, showToast, data, lvl } = ctx;
   const quote = QUOTES[new Date().getDate() % QUOTES.length];
 
   const manualTasks = [
-    { id: "morning_plan", label: "晨間計畫", exp: 10 },
-    { id: "workout", label: "健身", exp: 20 },
-    { id: "reading", label: "閱讀", exp: 20 },
+    { id: "morning_plan", label: "晨間計畫", exp: 10, statKey: "focus" },
+    { id: "workout", label: "健身", exp: 20, statKey: "mindset" },
+    { id: "reading", label: "閱讀", exp: 20, statKey: "insight" },
   ];
 
   const followedToday = day.trades.some((t) => t.followed_checklist);
@@ -35,6 +34,7 @@ export default function HomeTab({ ctx }) {
       key: t.id,
       label: t.label,
       exp: t.exp,
+      statKey: t.statKey,
       done: day[t.id],
       manual: true,
     })),
@@ -49,13 +49,14 @@ export default function HomeTab({ ctx }) {
   const questPct = Math.round((completedQuestCount / checklistRows.length) * 100);
   const expPct = lvl.expToNext ? Math.round((lvl.expInto / lvl.expToNext) * 100) : 100;
   const rankTitle = titleForLevel(lvl.level);
+  const characterStats = data.identity.stats;
   const hexAttributes = [
-    { key: "focus", label: "專注", value: initialCharacter.stats.focus },
-    { key: "discipline", label: "紀律", value: initialCharacter.stats.discipline },
-    { key: "mindset", label: "心態", value: initialCharacter.stats.mindset },
-    { key: "execution", label: "執行", value: initialCharacter.stats.execution },
-    { key: "observation", label: "觀察", value: initialCharacter.stats.observation },
-    { key: "insight", label: "洞察", value: initialCharacter.stats.insight },
+    { key: "focus", label: "專注", value: characterStats.focus },
+    { key: "discipline", label: "紀律", value: characterStats.discipline },
+    { key: "mindset", label: "心態", value: characterStats.mindset },
+    { key: "execution", label: "執行", value: characterStats.execution },
+    { key: "observation", label: "觀察", value: characterStats.observation },
+    { key: "insight", label: "洞察", value: characterStats.insight },
   ];
 
   const energy = Math.max(
@@ -73,10 +74,10 @@ export default function HomeTab({ ctx }) {
     )
   );
 
-  const toggleManual = (id, exp, label) => {
+  const toggleManual = (id, exp, label, statKey) => {
     if (day[id]) return;
     updateDay((d) => ({ ...d, [id]: true }));
-    addExp(exp, label);
+    addReward({ exp, label, statKey });
     showToast(`+${exp} EXP · ${label}`, "reward");
   };
 
@@ -269,7 +270,7 @@ export default function HomeTab({ ctx }) {
         {checklistRows.slice(0, 5).map((row, i) => (
           <div
             key={row.key}
-            onClick={() => row.manual && !row.done && toggleManual(row.key, row.exp, row.label)}
+            onClick={() => row.manual && !row.done && toggleManual(row.key, row.exp, row.label, row.statKey)}
             className="flex items-center justify-between gap-3"
             style={{
               borderTop: i === 0 ? "none" : `1px solid rgba(42,44,54,0.78)`,

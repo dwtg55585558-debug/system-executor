@@ -1,3 +1,12 @@
+export const INITIAL_CHARACTER_STATS = {
+  focus: 10,
+  discipline: 10,
+  mindset: 10,
+  execution: 10,
+  observation: 10,
+  insight: 10
+};
+
 export const initialCharacter = {
   id: "char_001",
 
@@ -17,14 +26,7 @@ export const initialCharacter = {
 
   maxEnergy: 40,
 
-  stats: {
-  focus: 10,      // 專注
-  discipline: 10, // 紀律
-  mindset: 10,    // 心態
-  execution: 10,  // 執行
-  observation: 10,// 觀察
-  insight: 10     // 洞察
-},
+  stats: INITIAL_CHARACTER_STATS,
 
   currency: {
     gold: 0,

@@ -3,6 +3,19 @@ import { loadState, saveState, clearState } from "../utils/storage.js";
 import { emptyDay, defaultState, todayStr, computeStats, uid } from "../utils/helpers.js";
 import { computeLevel } from "../utils/levels.js";
 import { ACHIEVEMENTS } from "../utils/constants.js";
+import { INITIAL_CHARACTER_STATS } from "../data/character.js";
+
+function migrateIdentity(identity = {}) {
+  return {
+    ...identity,
+    totalExp: identity.totalExp ?? 0,
+    integrity: identity.integrity ?? 100,
+    stats: {
+      ...INITIAL_CHARACTER_STATS,
+      ...(identity.stats || {}),
+    },
+  };
+}
 
 export function useAppState(showToast) {
   const [loading, setLoading] = useState(true);
@@ -15,7 +28,11 @@ export function useAppState(showToast) {
     (async () => {
       const parsed = await loadState();
       if (parsed) {
-        Object.values(parsed.history || {}).forEach((s) => {
+        const migrated = {
+          ...parsed,
+          identity: migrateIdentity(parsed.identity),
+        };
+        Object.values(migrated.history || {}).forEach((s) => {
           (s.trades || []).forEach((t) => {
             if (!t.id) t.id = uid();
           });
@@ -24,7 +41,7 @@ export function useAppState(showToast) {
           if (s.calibration_done === undefined) s.calibration_done = true; // don't retroactively force calibration on old days
           if (s.aiMentor === undefined) s.aiMentor = null;
         });
-        setData(parsed);
+        setData(migrated);
       } else {
         setData(defaultState());
       }
@@ -86,6 +103,31 @@ export function useAppState(showToast) {
     [today]
   );
 
+  const addReward = useCallback(
+    ({ exp, label, statKey, statAmount = 1 }) => {
+      setData((prev) => {
+        const identity = migrateIdentity(prev.identity);
+        const newTotal = Math.max(0, identity.totalExp + exp);
+        const nextStats = statKey
+          ? {
+              ...identity.stats,
+              [statKey]: (identity.stats[statKey] ?? 0) + statAmount,
+            }
+          : identity.stats;
+        const expLog = [
+          ...prev.expLog,
+          { date: today, amount: exp, label, total: newTotal, ts: Date.now() },
+        ];
+        return {
+          ...prev,
+          identity: { ...identity, totalExp: newTotal, stats: nextStats },
+          expLog,
+        };
+      });
+    },
+    [today]
+  );
+
   const adjustIntegrity = useCallback(
     (delta) => {
       setData((prev) => {
@@ -136,6 +178,7 @@ export function useAppState(showToast) {
     lvl,
     stats,
     addExp,
+    addReward,
     adjustIntegrity,
     updateDay,
     updateHistoryDay,

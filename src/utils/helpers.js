@@ -1,4 +1,5 @@
 import { VIOLATION_TYPES } from "./constants.js";
+import { INITIAL_CHARACTER_STATS } from "../data/character.js";
 
 export function todayStr(d = new Date()) {
   const y = d.getFullYear(),
@@ -37,7 +38,7 @@ export function emptyDay(date) {
 
 export function defaultState() {
   return {
-    identity: { totalExp: 0, integrity: 100 },
+    identity: { totalExp: 0, integrity: 100, stats: INITIAL_CHARACTER_STATS },
     history: { [todayStr()]: emptyDay(todayStr()) },
     expLog: [],
     integrityLog: [{ date: todayStr(), value: 100 }],

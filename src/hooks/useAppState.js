@@ -5,11 +5,19 @@ import { computeLevel } from "../utils/levels.js";
 import { ACHIEVEMENTS } from "../utils/constants.js";
 import { INITIAL_CHARACTER_STATS } from "../data/character.js";
 
-function migrateIdentity(identity = {}) {
+const DAILY_MAX_ENERGY = 40;
+
+function migrateIdentity(identity = {}, today = todayStr()) {
+  const isToday = identity.energyDate === today;
+  const energy = isToday ? identity.energy ?? DAILY_MAX_ENERGY : DAILY_MAX_ENERGY;
+
   return {
     ...identity,
     totalExp: identity.totalExp ?? 0,
     integrity: identity.integrity ?? 100,
+    energy,
+    maxEnergy: DAILY_MAX_ENERGY,
+    energyDate: today,
     stats: {
       ...INITIAL_CHARACTER_STATS,
       ...(identity.stats || {}),
@@ -30,7 +38,7 @@ export function useAppState(showToast) {
       if (parsed) {
         const migrated = {
           ...parsed,
-          identity: migrateIdentity(parsed.identity),
+          identity: migrateIdentity(parsed.identity, today),
         };
         Object.values(migrated.history || {}).forEach((s) => {
           (s.trades || []).forEach((t) => {
@@ -142,6 +150,19 @@ export function useAppState(showToast) {
     [today]
   );
 
+  const spendEnergy = useCallback(
+    (amount) => {
+      setData((prev) => {
+        const identity = migrateIdentity(prev.identity, today);
+        return {
+          ...prev,
+          identity: { ...identity, energy: identity.energy - amount },
+        };
+      });
+    },
+    [today]
+  );
+
   const updateDay = useCallback(
     (mutator) => {
       setData((prev) => {
@@ -180,6 +201,7 @@ export function useAppState(showToast) {
     addExp,
     addReward,
     adjustIntegrity,
+    spendEnergy,
     updateDay,
     updateHistoryDay,
     resetProgress,

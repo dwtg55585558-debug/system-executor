@@ -4,9 +4,17 @@ import SectionLabel from "../components/SectionLabel.jsx";
 import { C, FONT_MONO } from "../styles/theme.js";
 import { initialCharacter } from "../data/character.js";
 
-export default function SystemTab() {
-  const character = initialCharacter;
+export default function SystemTab({ ctx }) {
+  const character = {
+    ...initialCharacter,
+    level: ctx.lvl.level,
+    exp: ctx.data.identity.totalExp,
+    integrity: ctx.data.identity.integrity,
+    energy: ctx.data.identity.energy,
+    maxEnergy: ctx.data.identity.maxEnergy,
+  };
   const expPercent = (character.exp / character.nextLevelExp) * 100;
+  const energyPercent = Math.max(0, Math.min(100, (character.energy / character.maxEnergy) * 100));
 
   return (
     <div>
@@ -109,7 +117,7 @@ export default function SystemTab() {
               <div
                 className="h-full rounded-full"
                 style={{
-                  width: `${(character.energy / character.maxEnergy) * 100}%`,
+                  width: `${energyPercent}%`,
                   background: C.gold,
                 }}
               />

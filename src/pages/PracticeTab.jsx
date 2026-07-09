@@ -14,7 +14,7 @@ import {
 import { uid, detectRiskConditions } from "../utils/helpers.js";
 
 export default function PracticeTab({ ctx }) {
-  const { day, data, updateDay, addExp, addReward, adjustIntegrity, showToast, setBossCard } = ctx;
+  const { day, data, updateDay, addExp, addReward, adjustIntegrity, spendEnergy, showToast, setBossCard } = ctx;
   const [goal, setGoal] = useState(day.identityStatement || "");
   const [editingId, setEditingId] = useState(null);
   const [symbol, setSymbol] = useState("");
@@ -119,6 +119,7 @@ export default function PracticeTab({ ctx }) {
     } else {
       const alreadyAwarded = day.trades.some((t) => t.followed_checklist);
       updateDay((d) => ({ ...d, trades: [...d.trades, tradeData] }));
+      spendEnergy(10);
       if (tradeData.followed_checklist && !alreadyAwarded) {
         addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
         showToast("符合策略交易｜EXP +40｜執行 +1", "reward");

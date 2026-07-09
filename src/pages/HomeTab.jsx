@@ -59,20 +59,8 @@ export default function HomeTab({ ctx }) {
     { key: "insight", label: "洞察", value: characterStats.insight },
   ];
 
-  const energy = Math.max(
-    0,
-    Math.min(
-      100,
-      Math.round(
-        55 +
-          (day.morning_plan ? 10 : 0) +
-          (day.checklist_pass ? 10 : 0) +
-          (day.successful_wait ? 10 : 0) +
-          (day.journal ? 15 : 0) -
-          day.violations.length * 12
-      )
-    )
-  );
+  const energy = data.identity.energy;
+  const maxEnergy = data.identity.maxEnergy;
 
   const toggleManual = (id, exp, label, statKey) => {
     if (day[id]) return;
@@ -378,7 +366,7 @@ export default function HomeTab({ ctx }) {
               <div style={{ color: C.textFaint, fontSize: 11, fontFamily: FONT_MONO }}>Energy</div>
               <div style={{ color: C.text, fontFamily: FONT_DISPLAY, fontSize: 25, marginTop: 2 }}>
                 {energy}
-                <span style={{ color: C.textFaint, fontSize: 13 }}> /100</span>
+                <span style={{ color: C.textFaint, fontSize: 13 }}> /{maxEnergy}</span>
               </div>
             </div>
           </div>

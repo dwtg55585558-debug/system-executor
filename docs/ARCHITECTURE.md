@@ -66,6 +66,10 @@ state
   identity
     totalExp
     integrity
+    energy
+    maxEnergy
+    energyDate
+    stats
   history
     YYYY-MM-DD
       date
@@ -90,6 +94,8 @@ state
 
 The active day is derived with `todayStr()` and read as `data.history[today]`. If a missing day is detected, `useAppState` inserts `emptyDay(today)`.
 
+`identity.energy` is daily trading decision energy. `maxEnergy` is fixed at 40. On app load, missing energy fields are migrated, and a stale `energyDate` resets energy to 40 for the current date. Same-day loads preserve the existing energy value, including negative values.
+
 ### Persistence
 
 `src/utils/storage.js` wraps browser `localStorage` under the key `system-executor-state`.
@@ -102,6 +108,7 @@ The active day is derived with `todayStr()` and read as `data.history[today]`. I
 
 - `addExp(amount, label)`
 - `adjustIntegrity(delta)`
+- `spendEnergy(amount)`
 - `updateDay(mutator)`
 - `updateHistoryDay(date, mutator)`
 - `resetProgress()`
@@ -131,6 +138,7 @@ Practice is the largest feature module. It owns:
 - pre-trade checklist toggles and completion
 - trade form local state
 - trade creation and editing
+- new trade energy spending
 - trade edit history diffing
 - system validation for followed-strategy trades
 - decision risk monitor trigger

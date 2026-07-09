@@ -68,11 +68,17 @@ Fields:
 
 - `totalExp`
 - `integrity`
+- `energy`
+- `maxEnergy`
+- `energyDate`
 
 Mutations:
 
 - `addExp(amount, label)`
 - `adjustIntegrity(delta)`
+- `spendEnergy(amount)`
+
+Energy is daily trading decision energy. It has a fixed maximum of 40, resets to 40 on a new app load day, and decreases by 10 only after a new trade record is successfully created. Energy may go below 0 and must not be used as a PnL reward or penalty.
 
 Logs:
 
@@ -185,6 +191,7 @@ Features:
 - Morning plan.
 - Pre-trade checklist.
 - Trade creation and editing.
+- New trade creation spends 10 Energy after the trade is committed.
 - System validation for followed-strategy trades.
 - Decision Risk Monitor.
 - Successful wait logging.

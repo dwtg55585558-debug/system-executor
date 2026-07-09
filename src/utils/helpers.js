@@ -37,11 +37,20 @@ export function emptyDay(date) {
 }
 
 export function defaultState() {
+  const today = todayStr();
+
   return {
-    identity: { totalExp: 0, integrity: 100, stats: INITIAL_CHARACTER_STATS },
-    history: { [todayStr()]: emptyDay(todayStr()) },
+    identity: {
+      totalExp: 0,
+      integrity: 100,
+      energy: 40,
+      maxEnergy: 40,
+      energyDate: today,
+      stats: INITIAL_CHARACTER_STATS,
+    },
+    history: { [today]: emptyDay(today) },
     expLog: [],
-    integrityLog: [{ date: todayStr(), value: 100 }],
+    integrityLog: [{ date: today, value: 100 }],
     achievementsUnlocked: [],
   };
 }

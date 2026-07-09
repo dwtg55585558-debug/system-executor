@@ -18,12 +18,13 @@ export const initialCharacter = {
   maxEnergy: 40,
 
   stats: {
-    discipline: 10,   // 紀律
-    execution: 10,    // 執行
-    patience: 10,     // 耐心
-    mindset: 10,      // 心態
-    analysis: 10      // 分析
-  },
+  focus: 10,      // 專注
+  discipline: 10, // 紀律
+  mindset: 10,    // 心態
+  execution: 10,  // 執行
+  observation: 10,// 觀察
+  insight: 10     // 洞察
+},
 
   currency: {
     gold: 0,

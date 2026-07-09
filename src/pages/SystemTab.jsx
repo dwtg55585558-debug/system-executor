@@ -1,147 +1,237 @@
 import React from "react";
-import { Sparkles, Lock, RotateCcw } from "lucide-react";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import Card from "../components/Card.jsx";
 import SectionLabel from "../components/SectionLabel.jsx";
-import IdentityRing from "../components/IdentityRing.jsx";
 import { C, FONT_MONO } from "../styles/theme.js";
-import { TITLE_BANDS, BOSSES, VIOLATION_TYPES, ACHIEVEMENTS, RARITY_COLOR, JOURNAL_GAP_WARNING } from "../utils/constants.js";
-import { titleForLevel } from "../utils/levels.js";
-import { journalGapDays } from "../utils/helpers.js";
+import { initialCharacter } from "../data/character.js";
 
-export default function SystemTab({ ctx, onReset }) {
-  const { data, lvl } = ctx;
+function StatRadar({ stats }) {
+  const items = [
+    ["專注", stats.focus],
+    ["洞察", stats.insight],
+    ["觀察", stats.observation],
+    ["執行", stats.execution],
+    ["心態", stats.mindset],
+    ["紀律", stats.discipline],
+  ];
 
-  const integrityData = data.integrityLog.slice(-14).map((p, i) => ({ name: i, value: p.value }));
+  const size = 240;
+  const center = size / 2;
+  const maxRadius = 82;
+  const maxValue = 100;
 
-  const bossStats = BOSSES.map((b) => {
-    const encountered = Object.values(data.history).reduce(
-      (sum, s) => sum + s.violations.filter((v) => VIOLATION_TYPES.find((vt) => vt.id === v.id)?.bossId === b.id).length,
-      0
-    );
-    const defeated = Object.values(data.history).reduce((sum, s) => sum + (s.bossResists.includes(b.id) ? 1 : 0), 0);
-    return { ...b, encountered, defeated };
-  });
+  const point = (index, value) => {
+    const angle = -90 + index * 60;
+    const rad = (Math.PI / 180) * angle;
+    const radius = (value / maxValue) * maxRadius;
+    return [
+      center + Math.cos(rad) * radius,
+      center + Math.sin(rad) * radius,
+    ];
+  };
 
-  const gap = journalGapDays(data.history);
-  const sortedDates = Object.keys(data.history).sort();
-  const todayViolations = (data.history[sortedDates[sortedDates.length - 1]] || {}).violations || [];
-  let reason = null,
-    recovery = null;
-  if (data.identity.integrity < 100) {
-    if (gap >= JOURNAL_GAP_WARNING) {
-      reason = `Daily Reflection 已中斷 ${gap} 天。`;
-      recovery = "完成今天 Journal。";
-    } else if (todayViolations.length > 0) {
-      reason = "今天出現過偏離系統的決策。";
-      recovery = "明天回到系統,Integrity 會逐步恢復。";
-    } else {
-      reason = "過去的偏離尚未完全修復。";
-      recovery = "持續完成每日任務即可恢復。";
-    }
-  }
+  const outerPoint = (index, radius = maxRadius) => {
+    const angle = -90 + index * 60;
+    const rad = (Math.PI / 180) * angle;
+    return [
+      center + Math.cos(rad) * radius,
+      center + Math.sin(rad) * radius,
+    ];
+  };
+
+  const polygon = items.map(([, value], i) => point(i, value).join(",")).join(" ");
+
+  return (
+    <div className="flex flex-col items-center">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        {[1, 0.75, 0.5, 0.25].map((scale) => (
+          <polygon
+            key={scale}
+            points={items.map((_, i) => outerPoint(i, maxRadius * scale).join(",")).join(" ")}
+            fill="none"
+            stroke={C.hair}
+            strokeWidth="1"
+          />
+        ))}
+
+        {items.map((_, i) => {
+          const [x, y] = outerPoint(i);
+          return (
+            <line
+              key={i}
+              x1={center}
+              y1={center}
+              x2={x}
+              y2={y}
+              stroke={C.hair}
+              strokeWidth="1"
+            />
+          );
+        })}
+
+        <polygon
+          points={polygon}
+          fill="rgba(213, 184, 135, 0.28)"
+          stroke={C.gold}
+          strokeWidth="2"
+        />
+
+        {items.map(([label, value], i) => {
+          const [x, y] = outerPoint(i, 108);
+          return (
+            <text
+              key={label}
+              x={x}
+              y={y}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill={C.text}
+              fontSize="12"
+              fontWeight="700"
+            >
+              {label}
+              <tspan x={x} dy="16" fill={C.gold} fontSize="13">
+                {value}
+              </tspan>
+            </text>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+export default function SystemTab() {
+  const character = initialCharacter;
+  const expPercent = (character.exp / character.nextLevelExp) * 100;
 
   return (
     <div>
       <div style={{ color: C.textDim, fontSize: 13 }} className="mb-3">
-        系統
+        角色
       </div>
 
       <Card className="flex items-center gap-4">
-        <IdentityRing
-          level={lvl.level}
-          title={titleForLevel(lvl.level)}
-          expPct={lvl.expToNext ? (lvl.expInto / lvl.expToNext) * 100 : 100}
-          integrityPct={data.identity.integrity}
-        />
+        <div
+          className="rounded-full shrink-0 flex items-center justify-center"
+          style={{
+            width: 72,
+            height: 72,
+            border: `2px solid ${C.gold}`,
+            background: C.raised2,
+            color: C.gold,
+            fontSize: 28,
+          }}
+        >
+          ⚔️
+        </div>
+
         <div className="flex-1 min-w-0">
-          <div style={{ color: C.textFaint, fontSize: 11 }}>EXP 到下一級</div>
-          <div style={{ fontFamily: FONT_MONO, fontSize: 15, color: C.violet }}>
-            {lvl.expInto} / {lvl.expToNext || "MAX"}
+          <div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>
+            {character.name}
           </div>
-          <div style={{ color: C.textFaint, fontSize: 11, marginTop: 10 }}>System Integrity</div>
-          <div style={{ fontFamily: FONT_MONO, fontSize: 15, color: C.gold }}>{data.identity.integrity}%</div>
+
+          <div style={{ color: C.textDim, fontSize: 13, marginTop: 4 }}>
+            等級 {character.level}・{character.title}・{character.stage}
+          </div>
+
+          <div className="mt-4">
+            <div
+              className="h-2 rounded-full overflow-hidden"
+              style={{ background: C.raised }}
+            >
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${expPercent}%`,
+                  background: C.gold,
+                }}
+              />
+            </div>
+
+            <div
+              className="mt-2 flex justify-between"
+              style={{ fontFamily: FONT_MONO, fontSize: 12, color: C.textFaint }}
+            >
+              <span>
+                {character.exp} / {character.nextLevelExp} EXP
+              </span>
+              <span>0日目</span>
+            </div>
+          </div>
         </div>
       </Card>
 
-      <SectionLabel>身份成長路徑</SectionLabel>
+      <SectionLabel>核心屬性</SectionLabel>
       <Card>
-        {TITLE_BANDS.map(([threshold, , zh], i) => {
-          const active = lvl.level >= threshold;
-          const isCurrent = i === TITLE_BANDS.length - 1 ? active : active && lvl.level < TITLE_BANDS[i + 1][0];
-          return (
-            <div key={threshold} className="flex items-center gap-3 py-1.5">
-              <div className="rounded-full shrink-0" style={{ width: 7, height: 7, background: active ? C.gold : C.hair }} />
-              <div style={{ fontSize: 13, color: isCurrent ? C.gold : active ? C.text : C.textFaint }}>
-                Lv.{threshold} — {zh}
-              </div>
-              {isCurrent && <span style={{ fontSize: 10, color: C.gold, marginLeft: "auto" }}>目前</span>}
-            </div>
-          );
-        })}
+        <StatRadar stats={character.stats} />
       </Card>
 
-      <SectionLabel>System Integrity 趨勢</SectionLabel>
+      <SectionLabel>今日成長</SectionLabel>
       <Card>
-        <div style={{ height: 140 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={integrityData}>
-              <CartesianGrid stroke={C.hair} strokeDasharray="3 3" vertical={false} />
-              <XAxis hide dataKey="name" />
-              <YAxis domain={[0, 100]} hide />
-              <Tooltip contentStyle={{ background: C.raised2, border: `1px solid ${C.hair}`, fontSize: 12 }} labelStyle={{ display: "none" }} />
-              <Line type="monotone" dataKey="value" stroke={C.gold} strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        {reason && (
-          <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.hair}` }}>
-            <div style={{ fontSize: 11.5, color: C.textFaint }}>原因</div>
-            <div style={{ fontSize: 12.5, color: C.textDim, marginTop: 2 }}>{reason}</div>
-            <div style={{ fontSize: 11.5, color: C.textFaint, marginTop: 8 }}>恢復方式</div>
-            <div style={{ fontSize: 12.5, color: C.sage, marginTop: 2 }}>{recovery}</div>
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div>
+            <div style={{ color: C.textFaint, fontSize: 12 }}>EXP</div>
+            <div style={{ color: C.gold, fontSize: 24, fontWeight: 800 }}>
+              +0
+            </div>
           </div>
-        )}
+
+          <div>
+            <div style={{ color: C.textFaint, fontSize: 12 }}>Integrity</div>
+            <div style={{ color: C.gold, fontSize: 24, fontWeight: 800 }}>
+              +0
+            </div>
+          </div>
+
+          <div>
+            <div style={{ color: C.textFaint, fontSize: 12 }}>連續天數</div>
+            <div style={{ color: C.gold, fontSize: 24, fontWeight: 800 }}>
+              {character.streak.strategy}
+            </div>
+          </div>
+        </div>
       </Card>
 
-      <SectionLabel>心魔圖鑑</SectionLabel>
-      <div className="grid grid-cols-2 gap-2">
-        {bossStats.map((b) => (
-          <Card key={b.id} style={{ padding: 12 }}>
-            <div style={{ fontSize: 13, fontFamily: "'Iowan Old Style', Georgia, serif" }}>{b.name}</div>
-            <div style={{ fontSize: 10.5, color: C.textFaint, marginTop: 4, lineHeight: 1.4 }}>{b.desc}</div>
-            <div className="flex items-center justify-between mt-2.5">
-              <span style={{ fontSize: 10.5, color: C.ash }}>遭遇 {b.encountered}</span>
-              <span style={{ fontSize: 10.5, color: C.sage }}>擊退 {b.defeated}</span>
+      <SectionLabel>修練資源</SectionLabel>
+      <Card>
+        <div className="space-y-3">
+          <div>
+            <div className="flex justify-between mb-1">
+              <span style={{ color: C.textDim, fontSize: 13 }}>Energy</span>
+              <span style={{ color: C.gold, fontFamily: FONT_MONO, fontSize: 13 }}>
+                {character.energy} / {character.maxEnergy}
+              </span>
             </div>
-          </Card>
-        ))}
-      </div>
 
-      <SectionLabel>成就牆</SectionLabel>
-      <div className="grid grid-cols-2 gap-2">
-        {ACHIEVEMENTS.map((a) => {
-          const unlocked = data.achievementsUnlocked.includes(a.id);
-          const color = RARITY_COLOR[a.rarity];
-          return (
-            <Card key={a.id} style={{ padding: 12, borderColor: unlocked ? color : C.hair, opacity: unlocked ? 1 : 0.5 }}>
-              <div className="flex items-center gap-1.5">
-                {unlocked ? <Sparkles size={12} color={color} /> : <Lock size={12} color={C.textFaint} />}
-                <span style={{ fontSize: 12.5, color: unlocked ? C.text : C.textFaint }}>{a.name}</span>
-              </div>
-              <div style={{ fontSize: 10.5, color: C.textFaint, marginTop: 4, lineHeight: 1.4 }}>{a.desc}</div>
-            </Card>
-          );
-        })}
-      </div>
+            <div
+              className="h-2 rounded-full overflow-hidden"
+              style={{ background: C.raised }}
+            >
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${(character.energy / character.maxEnergy) * 100}%`,
+                  background: C.gold,
+                }}
+              />
+            </div>
+          </div>
 
-      <button
-        onClick={onReset}
-        className="w-full rounded-lg py-2.5 text-xs mt-6 flex items-center justify-center gap-1.5"
-        style={{ background: C.raised, color: C.textFaint, border: `1px solid ${C.hair}` }}
-      >
-        <RotateCcw size={12} /> 重置我的進度
-      </button>
+          <div className="flex justify-between">
+            <span style={{ color: C.textDim, fontSize: 13 }}>Gold</span>
+            <span style={{ color: C.gold, fontFamily: FONT_MONO }}>
+              {character.currency.gold}
+            </span>
+          </div>
+
+          <div className="flex justify-between">
+            <span style={{ color: C.textDim, fontSize: 13 }}>Crystal</span>
+            <span style={{ color: C.gold, fontFamily: FONT_MONO }}>
+              {character.currency.crystal}
+            </span>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }

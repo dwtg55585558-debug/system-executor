@@ -250,11 +250,33 @@ Constants:
 State:
 
 - `day.checklistChecks`
-- `day.checklist_pass`
+- `day.checklist_pass`: whether execution permission for the next normal-mode new trade is currently valid
+- `day.claimedRewards.checklist`: whether the Checklist has been completed at least once today and its daily reward has been claimed
 
 Reward:
 
-- +20 EXP after all checklist items are checked.
+- The first completion each day grants +20 EXP and discipline +1.
+- Later completions on the same day grant no additional reward and only renew execution permission.
+
+Rules:
+
+- Morning calibration remains a once-per-day activity and is the entry gate for normal daily trading.
+- The Checklist is locked until morning calibration is complete and must then be completed before every normal-mode new trade.
+- A normal-mode new trade requires both completed morning calibration and currently valid Checklist permission.
+- Every successfully created non-stop-loss-mode trade clears `day.checklist_pass` and `day.checklistChecks`, so the next trade requires a fresh Checklist.
+- Editing an existing trade does not require, consume, or reset Checklist permission.
+- Manual stop-loss-mode trades preserve their existing behavior and do not require, consume, or reset Checklist permission.
+- Home daily progress uses `day.claimedRewards.checklist`, with today's Checklist EXP log as a compatibility fallback, so consuming execution permission does not reverse daily completion.
+
+Trade form entry:
+
+- The new-trade form is collapsed by default and each trade is opened deliberately through `Execute trade N`, using today's trade count plus one.
+- Checklist completion unlocks the entry but does not automatically open the form.
+- Account selection remains visible while collapsed; an active account-protection confirmation appears only after the user opens that trade attempt and before the form.
+- Decision Risk Check remains after form submission and before commit.
+- Editing an existing trade opens the populated form directly without the new-trade entry guards.
+- Successful creation, successful editing, and cancellation reset and collapse the form.
+- The open/collapsed state is pure component UI state and is never stored in local storage.
 
 ### Trade Logging
 

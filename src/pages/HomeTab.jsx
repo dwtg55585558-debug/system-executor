@@ -50,9 +50,13 @@ export default function HomeTab({ ctx }) {
   const stopLossMode = !!day.stopLossMode;
   const gapDays = journalGapDays(data.history);
   const tradeTrainingDone = !!(day.strategy_trade || day.successful_wait);
+  const checklistCompletedToday =
+    day.claimedRewards?.checklist === true ||
+    data.expLog.some((log) => log.date === ctx.today && log.label === "交易前 Checklist");
+  const hasValidTradePermission = day.morning_plan === true && day.checklist_pass === true;
   const coreStages = [
     { key: "morning", label: "晨間校準", done: !!day.morning_plan },
-    { key: "checklist", label: "交易前準備", done: !!day.checklist_pass },
+    { key: "checklist", label: "交易前準備", done: checklistCompletedToday },
     { key: "training", label: "策略執行", done: tradeTrainingDone },
     { key: "journal", label: "今日復盤", done: !!day.journal },
   ];
@@ -63,18 +67,33 @@ export default function HomeTab({ ctx }) {
   let nextAction;
   if (!day.morning_plan) {
     nextAction = { title: "開始晨間校準", description: "先設定今日交易邊界。", cta: "開始校準", tab: "practice", target: "morning-calibration" };
-  } else if (!day.checklist_pass) {
+  } else if (!checklistCompletedToday) {
     nextAction = { title: "完成交易前 Checklist", description: "確認條件後再進入交易。", cta: "完成 Checklist", tab: "practice", target: "pre-trade-checklist" };
   } else if (!tradeTrainingDone) {
-    nextAction = {
-      title: "完成今日策略執行",
-      description: "記錄符合策略交易，或在沒有機會時完成成功等待。",
-      cta: "前往修煉",
-      tab: "practice",
-      target: "trade-practice",
-    };
+    nextAction = hasValidTradePermission
+      ? {
+          title: "完成今日策略執行",
+          description: "記錄符合策略交易，或在沒有機會時完成成功等待。",
+          cta: "前往修煉",
+          tab: "practice",
+          target: "trade-practice",
+        }
+      : {
+          title: "準備下一筆交易",
+          description: "重新確認條件，取得本筆執行許可。",
+          cta: "準備下一筆交易",
+          tab: "practice",
+          target: "pre-trade-checklist",
+        };
   } else if (!day.journal) {
-    nextAction = { title: "完成今日復盤", description: "用 Decision Journal 結束今日修煉。", cta: "開始復盤", tab: "journal", target: "decision-journal" };
+    nextAction = {
+      title: hasValidTradePermission ? "執行許可已取得" : "本輪修煉已完成",
+      description: hasValidTradePermission ? "可繼續記錄下一筆，或停止交易進入復盤。" : "可準備下一筆，或停止交易進入復盤。",
+      cta: hasValidTradePermission ? "記錄下一筆交易" : "準備下一筆交易",
+      tab: "practice",
+      target: hasValidTradePermission ? "trade-practice" : "pre-trade-checklist",
+      secondary: { cta: "今天停止交易，開始復盤", tab: "journal", target: "decision-journal" },
+    };
   } else {
     nextAction = { title: "今日修煉已完成", description: "今天的修煉閉環已完成。", complete: true };
   }
@@ -222,9 +241,16 @@ export default function HomeTab({ ctx }) {
               <Check size={16} /> 完成
             </div>
           ) : (
-            <button type="button" onClick={() => navigateTo(nextAction.tab, nextAction.target)} className="shrink-0 rounded-lg px-4 py-2 text-sm font-medium" style={{ minHeight: 40, background: C.goldDim, color: C.text }}>
-              {nextAction.cta}
-            </button>
+            <div className="shrink-0 flex flex-col gap-2">
+              <button type="button" onClick={() => navigateTo(nextAction.tab, nextAction.target)} className="rounded-lg px-4 py-2 text-sm font-medium" style={{ minHeight: 40, background: C.goldDim, color: C.text }}>
+                {nextAction.cta}
+              </button>
+              {nextAction.secondary && (
+                <button type="button" onClick={() => navigateTo(nextAction.secondary.tab, nextAction.secondary.target)} className="rounded-lg px-3 py-2 text-xs font-medium" style={{ minHeight: 40, border: `1px solid ${C.hair}`, background: C.raised, color: C.textDim }}>
+                  {nextAction.secondary.cta}
+                </button>
+              )}
+            </div>
           )}
         </div>
       </Card>

@@ -88,6 +88,7 @@ export default function PracticeTab({ ctx }) {
   const { day, data, updateDay, addExp, addReward, adjustIntegrity, spendEnergy, showToast, setTab, setBossCard, navigationTarget, setNavigationTarget } = ctx;
   const latestDayRef = useRef(day);
   latestDayRef.current = day;
+  const [isTradeFormOpen, setIsTradeFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [accountType, setAccountType] = useState("exam");
   const [symbol, setSymbol] = useState("");
@@ -121,6 +122,12 @@ export default function PracticeTab({ ctx }) {
   ];
   const allCalibrationChecked = morningCalibrationItems.every((item) => calibrationChecks[item.id] || day.morning_plan);
   const allChecked = CHECKLIST_ITEMS.every((c) => day.checklistChecks[c.id]);
+  const nextTradeNumber = day.trades.length + 1;
+  const hasValidTradePermission = day.morning_plan === true && day.checklist_pass === true;
+  const canOpenTrade = day.stopLossMode === true || hasValidTradePermission;
+  const checklistRewardClaimed =
+    day.claimedRewards?.checklist === true ||
+    data.expLog.some((log) => log.date === day.date && log.label === "交易前 Checklist");
 
   useEffect(() => {
     const supportedTargets = ["morning-calibration", "pre-trade-checklist", "trade-practice"];
@@ -137,6 +144,11 @@ export default function PracticeTab({ ctx }) {
   }, [navigationTarget, setNavigationTarget]);
 
   const toggleCheck = (id) => {
+    if (day.morning_plan !== true) {
+      showToast("請先完成晨間校準，再進行交易前準備", "info");
+      setNavigationTarget("morning-calibration");
+      return;
+    }
     if (day.checklist_pass) return;
     updateDay((d) => ({ ...d, checklistChecks: { ...d.checklistChecks, [id]: !d.checklistChecks[id] } }));
   };
@@ -147,9 +159,23 @@ export default function PracticeTab({ ctx }) {
   };
 
   const completeChecklist = () => {
-    updateDay((d) => ({ ...d, checklist_pass: true }));
-    addReward({ exp: 20, label: "交易前 Checklist", statKey: "discipline" });
-    showToast("交易前 Checklist 完成｜EXP +20｜紀律 +1", "reward");
+    if (day.morning_plan !== true) {
+      showToast("請先完成晨間校準，再進行交易前準備", "info");
+      setNavigationTarget("morning-calibration");
+      return;
+    }
+    if (day.checklist_pass || !allChecked) return;
+    updateDay((d) => ({
+      ...d,
+      checklist_pass: true,
+      claimedRewards: { ...(d.claimedRewards || {}), checklist: true },
+    }));
+    if (checklistRewardClaimed) {
+      showToast("交易前準備完成｜本筆執行許可已取得", "info");
+    } else {
+      addReward({ exp: 20, label: "交易前 Checklist", statKey: "discipline" });
+      showToast("交易前 Checklist 完成｜EXP +20｜紀律 +1", "reward");
+    }
     returnToHomeTop();
   };
 
@@ -167,6 +193,7 @@ export default function PracticeTab({ ctx }) {
   };
 
   const resetForm = () => {
+    setIsTradeFormOpen(false);
     setAccountType("exam");
     setSymbol("");
     setDirection("long");
@@ -184,6 +211,7 @@ export default function PracticeTab({ ctx }) {
   };
 
   const startEdit = (trade) => {
+    setIsTradeFormOpen(true);
     setEditingId(trade.id);
     setAccountType(getAccountType(trade));
     setSymbol(trade.symbol);
@@ -205,6 +233,27 @@ export default function PracticeTab({ ctx }) {
     setProtectionConfirmedForCurrentTrade(false);
     setProtectionChecks({});
     setEmotionProtectionRequired(false);
+  };
+
+  const openTradeForm = () => {
+    if (editingId) {
+      setIsTradeFormOpen(true);
+      return;
+    }
+    if (!day.stopLossMode && day.morning_plan !== true) {
+      showToast("請先完成晨間校準，再開始今日交易", "info");
+      setNavigationTarget("morning-calibration");
+      return;
+    }
+    if (!day.stopLossMode && day.checklist_pass !== true) {
+      showToast("請先完成交易前 Checklist，取得本筆交易許可", "info");
+      setNavigationTarget("pre-trade-checklist");
+      return;
+    }
+    setProtectionConfirmedForCurrentTrade(false);
+    setProtectionChecks({});
+    setRiskCheck(null);
+    setIsTradeFormOpen(true);
   };
 
   const isValidNumberInput = (value) => value !== "" && Number.isFinite(Number(value));
@@ -272,6 +321,18 @@ export default function PracticeTab({ ctx }) {
       }));
       showToast("已更新交易", "info");
     } else {
+      if (!latestDay.stopLossMode && latestDay.morning_plan !== true) {
+        setRiskCheck(null);
+        showToast("請先完成晨間校準，再開始今日交易", "info");
+        setNavigationTarget("morning-calibration");
+        return;
+      }
+      if (!latestDay.stopLossMode && latestDay.checklist_pass !== true) {
+        setRiskCheck(null);
+        showToast("請先完成交易前 Checklist，取得本筆交易許可", "info");
+        setNavigationTarget("pre-trade-checklist");
+        return;
+      }
       const reward = nextTradeRecordReward(latestDay.claimedRewards, latestDay.stopLossMode);
 
       updateDay((d) => {
@@ -280,6 +341,9 @@ export default function PracticeTab({ ctx }) {
           ...d,
           trades: newTrades,
           strategy_trade: hasValidStrategyTrade(newTrades, d.stopLossMode),
+          ...(!d.stopLossMode
+            ? { checklist_pass: false, checklistChecks: {} }
+            : {}),
           claimedRewards:
             reward.exp > 0
               ? {
@@ -315,6 +379,7 @@ export default function PracticeTab({ ctx }) {
     updateDay((d) => ({ ...d, riskEvents: [...d.riskEvents, { reasons: riskCheck.reasons, response, ts: Date.now() }] }));
     if (response === "emotionally_driven") {
       setRiskCheck(null);
+      setIsTradeFormOpen(false);
       setProtectionConfirmedForCurrentTrade(false);
       setProtectionChecks({});
       setEmotionProtectionRequired(true);
@@ -325,6 +390,16 @@ export default function PracticeTab({ ctx }) {
   };
 
   const submitTrade = () => {
+    if (!editingId && !day.stopLossMode && day.morning_plan !== true) {
+      showToast("請先完成晨間校準，再開始今日交易", "info");
+      setNavigationTarget("morning-calibration");
+      return;
+    }
+    if (!editingId && !day.stopLossMode && !hasValidTradePermission) {
+      showToast("請先完成交易前 Checklist，取得本筆交易許可", "info");
+      setNavigationTarget("pre-trade-checklist");
+      return;
+    }
     if (followed === null) {
       showToast("請選擇是否符合策略", "info");
       return;
@@ -449,8 +524,22 @@ export default function PracticeTab({ ctx }) {
       <div id="pre-trade-checklist" style={{ scrollMarginTop: "16px" }}>
         <SectionLabel>交易前 Checklist</SectionLabel>
         <Card>
+        {day.morning_plan !== true && (
+          <div className="mb-2 rounded-lg px-3 py-2 text-xs" style={{ background: C.raised, border: `1px solid ${C.hair}`, color: C.textFaint }}>
+            完成晨間校準後解鎖
+          </div>
+        )}
         {CHECKLIST_ITEMS.map((c) => (
-          <div key={c.id} onClick={() => toggleCheck(c.id)} className="flex items-center gap-2.5 py-1.5" style={{ cursor: day.checklist_pass ? "default" : "pointer" }}>
+          <div
+            key={c.id}
+            onClick={() => toggleCheck(c.id)}
+            aria-disabled={day.morning_plan !== true || day.checklist_pass}
+            className="flex items-center gap-2.5 py-1.5"
+            style={{
+              cursor: day.morning_plan !== true || day.checklist_pass ? "not-allowed" : "pointer",
+              opacity: day.morning_plan !== true ? 0.48 : 1,
+            }}
+          >
             <div
               className="flex items-center justify-center rounded-md shrink-0"
               style={{
@@ -466,7 +555,7 @@ export default function PracticeTab({ ctx }) {
           </div>
         ))}
         <button
-          disabled={!allChecked || day.checklist_pass}
+          disabled={day.morning_plan !== true || !allChecked || day.checklist_pass}
           onClick={completeChecklist}
           className="w-full rounded-lg py-2 text-sm font-medium mt-3"
           style={{
@@ -520,7 +609,32 @@ export default function PracticeTab({ ctx }) {
           ))}
         </div>
 
-        {mustCompleteProtectionBeforeForm ? (
+        {!editingId && !isTradeFormOpen ? (
+          <div className="rounded-lg p-3" style={{ background: C.raised, border: `1px solid ${canOpenTrade ? C.goldDim : C.hair}` }}>
+            <button
+              type="button"
+              onClick={openTradeForm}
+              aria-disabled={!canOpenTrade}
+              className="w-full rounded-lg py-2.5 text-sm font-medium"
+              style={{
+                background: canOpenTrade ? C.goldDim : C.raised2,
+                color: canOpenTrade ? C.text : C.textFaint,
+                cursor: canOpenTrade ? "pointer" : "not-allowed",
+              }}
+            >
+              {`執行第 ${nextTradeNumber} 筆交易`}
+            </button>
+            <div className="mt-2 text-center" style={{ fontSize: 11.5, color: canOpenTrade ? C.sage : C.textFaint }}>
+              {day.stopLossMode
+                ? "止血模式｜可記錄交易"
+                : day.morning_plan !== true
+                  ? "先完成晨間校準，才能開始今日交易"
+                  : day.checklist_pass !== true
+                    ? "先完成交易前 Checklist，取得本筆執行許可"
+                    : "本筆交易許可已取得"}
+            </div>
+          </div>
+        ) : !editingId && mustCompleteProtectionBeforeForm ? (
           <div className="rounded-lg p-3" style={{ background: "rgba(203,163,95,0.08)", border: `1px solid ${C.goldDim}` }}>
             <div style={{ fontSize: 12, color: C.gold, fontWeight: 800, marginBottom: 8 }}>
               {emotionProtectionRequired ? "系統執行者身份確認" : `${ACCOUNT_TYPE_LABEL[accountType]}保護確認`}
@@ -644,11 +758,9 @@ export default function PracticeTab({ ctx }) {
             )}
 
             <div className="flex gap-2">
-              {editingId && (
-                <button onClick={resetForm} className="flex-1 rounded-lg py-2 text-sm" style={{ background: C.raised, color: C.textDim }}>
-                  取消編輯
-                </button>
-              )}
+              <button onClick={resetForm} className="flex-1 rounded-lg py-2 text-sm" style={{ background: C.raised, color: C.textDim }}>
+                取消
+              </button>
               <button
                 onClick={submitTrade}
                 className="flex-1 rounded-lg py-2 text-sm font-medium"

@@ -141,11 +141,16 @@ export default function PracticeTab({ ctx }) {
     updateDay((d) => ({ ...d, checklistChecks: { ...d.checklistChecks, [id]: !d.checklistChecks[id] } }));
   };
 
+  const returnToHomeTop = () => {
+    setNavigationTarget("home-top");
+    setTab("home");
+  };
+
   const completeChecklist = () => {
     updateDay((d) => ({ ...d, checklist_pass: true }));
     addReward({ exp: 20, label: "交易前 Checklist", statKey: "discipline" });
     showToast("交易前 Checklist 完成｜EXP +20｜紀律 +1", "reward");
-    setTab("home");
+    returnToHomeTop();
   };
 
   const completeMorningPlan = () => {
@@ -153,7 +158,7 @@ export default function PracticeTab({ ctx }) {
     updateDay((d) => ({ ...d, morning_plan: true, identityStatement: executionGoal }));
     addReward({ exp: 10, label: "晨間校準", statKey: "focus" });
     showToast("晨間校準完成｜EXP +10｜專注 +1", "reward");
-    setTab("home");
+    returnToHomeTop();
   };
 
   const toggleCalibrationCheck = (id) => {
@@ -296,6 +301,14 @@ export default function PracticeTab({ ctx }) {
     }
     resetForm();
     setRiskCheck(null);
+    if (
+      !editingId &&
+      tradeData.followed_checklist === true &&
+      tradeData.emotion_affected !== true &&
+      !latestDay.stopLossMode
+    ) {
+      returnToHomeTop();
+    }
   };
 
   const respondRiskCheck = (response) => {
@@ -339,7 +352,7 @@ export default function PracticeTab({ ctx }) {
     updateDay((d) => ({ ...d, successful_wait: true }));
     addReward({ exp: 50, label: "成功等待", statKey: "discipline" });
     showToast("成功等待完成｜EXP +50｜紀律 +1", "reward");
-    setTab("home");
+    returnToHomeTop();
   };
 
   const resistBoss = (bossId) => {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   BookOpen,
@@ -23,6 +23,7 @@ export default function HomeTab({ ctx }) {
     updateDay,
     showToast,
     setTab,
+    navigationTarget,
     setNavigationTarget,
     updateIdentityName,
     data,
@@ -34,6 +35,12 @@ export default function HomeTab({ ctx }) {
   const [showAttributes, setShowAttributes] = useState(false);
   const [showDataManagement, setShowDataManagement] = useState(false);
   const quote = QUOTES[new Date().getDate() % QUOTES.length];
+
+  useEffect(() => {
+    if (navigationTarget !== "home-top") return;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setNavigationTarget(null);
+  }, [navigationTarget, setNavigationTarget]);
 
   const navigateTo = (tab, target) => {
     setNavigationTarget(target);

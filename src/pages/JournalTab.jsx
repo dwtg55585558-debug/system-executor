@@ -118,6 +118,7 @@ export default function JournalTab({ ctx }) {
         addReward({ exp: 20, label: "Decision Journal", statKey: "observation" });
         showToast("Decision Journal 完成｜EXP +20｜觀察 +1", "reward");
       }
+      setNavigationTarget("home-top");
       setTab("home");
     }
   };

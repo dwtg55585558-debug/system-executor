@@ -14,6 +14,7 @@ export default function StreakHeatmap({ history, onSelect }) {
     <div className="grid grid-cols-7 gap-1.5">
       {days.map((d) => {
         const s = history[d];
+        const label = d === todayStr(now) ? "今天" : `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
         let bg = C.raised;
         if (s) {
           if (s.violations.length > 0) bg = C.ashDim;
@@ -35,8 +36,17 @@ export default function StreakHeatmap({ history, onSelect }) {
                 background: bg,
                 borderRadius: 4,
                 border: `1px solid ${C.hair}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: s ? C.text : C.textFaint,
+                fontSize: 9,
+                lineHeight: 1,
+                whiteSpace: "nowrap",
               }}
-            />
+            >
+              {label}
+            </div>
           </button>
         );
       })}

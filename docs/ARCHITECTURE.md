@@ -106,7 +106,7 @@ state
 
 The active day is derived with `todayStr()` and read as `data.history[today]`. If a missing day is detected, `useAppState` inserts `emptyDay(today)`.
 
-`dailySnapshots[date]` stores the daily start baseline for reset-today behavior. It captures the daily quest fields, stop-loss mode, claimed reward flags, identity EXP, Energy, stats, EXP log, and unlocked achievements as they were at day initialization. Resetting today restores those baseline fields while preserving identity name and recorded trade/journal history.
+`dailySnapshots[date]` stores the daily start baseline for reset-today behavior. It captures the full active day state, claimed reward flags, identity EXP, Integrity, Energy, stats, EXP/integrity logs, and unlocked achievements as they were at day initialization. Resetting today restores those baseline fields while preserving identity name, character creation state, and all prior-date history.
 
 `identity.name` is the cultivator display name shown on the Home character card. New default state leaves it empty so first-time users must create an identity name. Older saved states without `identity.name` are migrated to `執行者`.
 
@@ -171,7 +171,7 @@ Practice is the largest feature module. It owns:
 
 This page mixes view layout, form state, validation, reward logic, penalty logic, edit-history generation, and risk flow orchestration.
 
-Account protection is automatic and local to `PracticeTab`. Each trade stores `accountType` as `exam` or `funded`; missing legacy values are treated as `exam`. The page derives protection state separately for each account type by summing today's P&L and checking whether any same-day trade for that account has `pnl < 0`. If either a negative trade exists or cumulative P&L is below 0, that account type enters protection. Protection shows an account-specific card and requires the four-item protection confirmation before each later trade form for that same account is available. Protection does not block trade recording, Energy spending, or normal followed-strategy rewards after confirmation. Manual `stopLossMode` remains the higher-priority reward restriction: trades are still recorded through the normal path, but new followed-strategy rewards are not granted while stop-loss mode is active.
+Account protection is automatic and local to `PracticeTab`. Each trade stores `accountType` as `exam` or `funded`; missing legacy values are treated as `exam`. Each trade may also store `emotion_affected`; missing legacy values are treated as `false`. The page derives protection state separately for each account type by summing today's P&L and checking whether any same-day trade for that account has `pnl < 0` or `emotion_affected === true`. If a negative trade exists, cumulative P&L is below 0, or an emotion-affected trade exists, that account type enters protection. Protection shows an account-specific card and requires the four-item protection confirmation before each later trade form for that same account is available. Protection does not block trade recording, Energy spending, or normal followed-strategy rewards after confirmation. Manual `stopLossMode` remains the higher-priority reward restriction: trades are still recorded through the normal path, but new followed-strategy rewards are not granted while stop-loss mode is active.
 
 ### `JournalTab`
 

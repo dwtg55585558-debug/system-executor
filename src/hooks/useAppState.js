@@ -15,19 +15,25 @@ import { INITIAL_CHARACTER_STATS } from "../data/character.js";
 const DAILY_MAX_ENERGY = 40;
 
 function restoreTodayFromBaseline(prev, date, baseline) {
-  const currentDay = prev.history[date] || emptyDay(date);
   const empty = emptyDay(date);
   const baselineDay = baseline.day || {};
   const nextDay = {
-    ...currentDay,
+    ...empty,
     calibration_done: baselineDay.calibration_done ?? empty.calibration_done,
     morning_plan: baselineDay.morning_plan ?? empty.morning_plan,
     workout: baselineDay.workout ?? empty.workout,
     reading: baselineDay.reading ?? empty.reading,
     checklist_pass: baselineDay.checklist_pass ?? empty.checklist_pass,
     checklistChecks: { ...(baselineDay.checklistChecks || empty.checklistChecks) },
+    trades: baselineDay.trades ? [...baselineDay.trades] : empty.trades,
     strategy_trade: baselineDay.strategy_trade,
     successful_wait: baselineDay.successful_wait ?? empty.successful_wait,
+    violations: baselineDay.violations ? [...baselineDay.violations] : empty.violations,
+    bossResists: baselineDay.bossResists ? [...baselineDay.bossResists] : empty.bossResists,
+    journal: baselineDay.journal ?? empty.journal,
+    riskEvents: baselineDay.riskEvents ? [...baselineDay.riskEvents] : empty.riskEvents,
+    eveningReflection: baselineDay.eveningReflection ?? empty.eveningReflection,
+    aiMentor: baselineDay.aiMentor ?? empty.aiMentor,
     stopLossMode: baselineDay.stopLossMode ?? empty.stopLossMode,
   };
 
@@ -48,6 +54,7 @@ function restoreTodayFromBaseline(prev, date, baseline) {
     identity: {
       ...prev.identity,
       totalExp: baseline.identity?.totalExp ?? prev.identity.totalExp,
+      integrity: baseline.identity?.integrity ?? prev.identity.integrity,
       energy: baseline.identity?.energy ?? prev.identity.energy,
       maxEnergy: baseline.identity?.maxEnergy ?? prev.identity.maxEnergy,
       energyDate: baseline.identity?.energyDate ?? date,
@@ -61,6 +68,7 @@ function restoreTodayFromBaseline(prev, date, baseline) {
       [date]: nextDay,
     },
     expLog: baseline.expLog ? [...baseline.expLog] : prev.expLog,
+    integrityLog: baseline.integrityLog ? [...baseline.integrityLog] : prev.integrityLog,
     achievementsUnlocked: baseline.achievementsUnlocked
       ? [...baseline.achievementsUnlocked]
       : prev.achievementsUnlocked,

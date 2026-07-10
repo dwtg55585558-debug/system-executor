@@ -45,6 +45,7 @@ function cloneValue(value) {
 export function dailyBaselineSnapshot(data, date = todayStr()) {
   const day = data.history?.[date] || emptyDay(date);
   const snapshotDay = {
+    date: day.date || date,
     calibration_done: day.calibration_done,
     morning_plan: day.morning_plan,
     identityStatement: day.identityStatement,
@@ -52,8 +53,15 @@ export function dailyBaselineSnapshot(data, date = todayStr()) {
     reading: day.reading,
     checklist_pass: day.checklist_pass,
     checklistChecks: cloneValue(day.checklistChecks || {}),
+    trades: cloneValue(day.trades || []),
     strategy_trade: day.strategy_trade,
     successful_wait: day.successful_wait,
+    violations: cloneValue(day.violations || []),
+    bossResists: cloneValue(day.bossResists || []),
+    journal: cloneValue(day.journal || null),
+    riskEvents: cloneValue(day.riskEvents || []),
+    eveningReflection: cloneValue(day.eveningReflection || null),
+    aiMentor: cloneValue(day.aiMentor || null),
     stopLossMode: day.stopLossMode,
   };
 
@@ -67,12 +75,14 @@ export function dailyBaselineSnapshot(data, date = todayStr()) {
     day: snapshotDay,
     identity: {
       totalExp: data.identity.totalExp,
+      integrity: data.identity.integrity,
       energy: data.identity.energy,
       maxEnergy: data.identity.maxEnergy,
       energyDate: data.identity.energyDate,
       stats: cloneValue(data.identity.stats),
     },
     expLog: cloneValue(data.expLog || []),
+    integrityLog: cloneValue(data.integrityLog || []),
     achievementsUnlocked: cloneValue(data.achievementsUnlocked || []),
   };
 }

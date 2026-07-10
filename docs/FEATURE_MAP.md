@@ -121,14 +121,14 @@ Purpose:
 
 Captured fields:
 
-- daily quest and calibration state
+- full active day state, including quests, calibration, trades, journal, risk events, reflections, violations, and boss resists
 - `stopLossMode`
 - `claimedRewards`
-- identity EXP, Energy, Energy date, max Energy, and stats
-- `expLog`
+- identity EXP, Integrity, Energy, Energy date, max Energy, and stats
+- `expLog` and `integrityLog`
 - `achievementsUnlocked`
 
-Reset-today restores these captured fields while preserving the cultivator name, character creation state, prior date history, trade records, and journal records.
+Reset-today restores these captured fields while preserving the cultivator name, character creation state, and prior-date history. Today's trades and journal return to the daily start snapshot, so they are cleared when the snapshot had none.
 
 ## Feature Areas
 
@@ -265,6 +265,7 @@ Trade fields:
 - `symbol`
 - `direction`
 - `followed_checklist`
+- `emotion_affected`
 - `stop_loss_set`
 - `entry_reason`
 - `r_value`
@@ -279,10 +280,11 @@ Rules:
 - `accountType` is stored on each trade as `exam` or `funded`. Missing legacy values fall back to `exam`.
 - `symbol`, `entry_reason`, checked `followed_checklist`, checked `stop_loss_set`, numeric `r_value`, and numeric `pnl` are required before a trade can be recorded.
 - `notes` is optional.
+- `emotion_affected` is optional, defaults to `false`, and marks that the trade was affected by emotion without blocking the trade record.
 - Incomplete required fields show the toast `請完成所有必填交易欄位` and do not spend Energy or award EXP/stats.
 - The first followed-strategy trade of the day awards +40 EXP.
 - Account protection is derived separately for `exam` and `funded` trades.
-- Protection activates for an account type when any same-day trade for that account has `pnl < 0`, or when that account's same-day cumulative P&L is below 0.
+- Protection activates for an account type when any same-day trade for that account has `pnl < 0`, that account's same-day cumulative P&L is below 0, or any same-day trade for that account has `emotion_affected === true`.
 - Protection only affects the matching account type and requires the four-item protection confirmation before each later trade form for that account is shown.
 - Protection does not block recording trades, spending Energy, or normal followed-strategy rewards after confirmation.
 - `stopLossMode` remains the higher-priority reward gate: new followed-strategy trades can still be recorded and spend Energy, but do not award the followed-strategy reward while stop-loss mode is active.

@@ -29,8 +29,8 @@ const PROTECTION_ITEMS = [
 
 const getAccountProtectionStates = (trades) => {
   const initial = {
-    exam: { dailyPnl: 0, hasLossTrade: false, active: false },
-    funded: { dailyPnl: 0, hasLossTrade: false, active: false },
+    exam: { dailyPnl: 0, hasLossTrade: false, hasEmotionAffectedTrade: false, active: false },
+    funded: { dailyPnl: 0, hasLossTrade: false, hasEmotionAffectedTrade: false, active: false },
   };
 
   const states = trades.reduce((acc, trade) => {
@@ -38,6 +38,7 @@ const getAccountProtectionStates = (trades) => {
     const pnlValue = trade.pnl == null ? 0 : Number(trade.pnl) || 0;
     acc[type].dailyPnl += pnlValue;
     if (trade.pnl != null && pnlValue < 0) acc[type].hasLossTrade = true;
+    if (trade.emotion_affected === true) acc[type].hasEmotionAffectedTrade = true;
     return acc;
   }, initial);
 
@@ -46,7 +47,7 @@ const getAccountProtectionStates = (trades) => {
       type,
       {
         ...state,
-        active: state.hasLossTrade || state.dailyPnl < 0,
+        active: state.hasLossTrade || state.dailyPnl < 0 || state.hasEmotionAffectedTrade,
       },
     ])
   );
@@ -61,6 +62,7 @@ export default function PracticeTab({ ctx }) {
   const [symbol, setSymbol] = useState("");
   const [direction, setDirection] = useState("long");
   const [followed, setFollowed] = useState(false);
+  const [emotionAffected, setEmotionAffected] = useState(false);
   const [stopLoss, setStopLoss] = useState(false);
   const [entryReason, setEntryReason] = useState("");
   const [rValue, setRValue] = useState("");
@@ -117,6 +119,7 @@ export default function PracticeTab({ ctx }) {
     setSymbol("");
     setDirection("long");
     setFollowed(false);
+    setEmotionAffected(false);
     setStopLoss(false);
     setEntryReason("");
     setRValue("");
@@ -134,6 +137,7 @@ export default function PracticeTab({ ctx }) {
     setSymbol(trade.symbol);
     setDirection(trade.direction);
     setFollowed(trade.followed_checklist);
+    setEmotionAffected(trade.emotion_affected === true);
     setStopLoss(trade.stop_loss_set);
     setEntryReason(trade.entry_reason || "");
     setRValue(trade.r_value != null ? String(trade.r_value) : "");
@@ -167,6 +171,7 @@ export default function PracticeTab({ ctx }) {
     symbol,
     direction,
     followed_checklist: followed,
+    emotion_affected: emotionAffected,
     stop_loss_set: stopLoss,
     entry_reason: entryReason.trim(),
     r_value: rValue === "" ? null : Number(rValue),
@@ -176,7 +181,7 @@ export default function PracticeTab({ ctx }) {
   });
 
   const diffTrade = (oldT, newT) => {
-    const fields = ["accountType", "symbol", "direction", "followed_checklist", "stop_loss_set", "entry_reason", "r_value", "notes", "pnl"];
+    const fields = ["accountType", "symbol", "direction", "followed_checklist", "emotion_affected", "stop_loss_set", "entry_reason", "r_value", "notes", "pnl"];
     const now = Date.now();
     return fields.filter((f) => oldT[f] !== newT[f]).map((f) => ({ field: f, old_value: oldT[f], new_value: newT[f], edited_at: now }));
   };
@@ -404,16 +409,18 @@ export default function PracticeTab({ ctx }) {
       <Card>
         {activeProtectionTypes.length > 0 && (
           <div className="space-y-2 mb-3">
-            {activeProtectionTypes.map(([type]) => (
+            {activeProtectionTypes.map(([type, state]) => (
               <div key={type} className="rounded-lg p-3" style={{ background: "rgba(116,43,43,0.16)", border: "1px solid rgba(203,120,72,0.42)" }}>
                 <div style={{ fontSize: 12, color: "#d6a15f", fontWeight: 800, marginBottom: 5 }}>
                   {ACCOUNT_TYPE_LABEL[type]}保護中
                 </div>
                 <div style={{ fontSize: 12.5, color: C.textDim, lineHeight: 1.55 }}>
-                  今天此帳戶已出現虧損紀錄，後續每一筆交易前都需要完成保護確認。
+                  今天此帳戶已出現虧損或情緒影響紀錄，後續每一筆交易前都需要完成保護確認。
                 </div>
                 <div style={{ fontSize: 11.5, color: C.textFaint, lineHeight: 1.5, marginTop: 5 }}>
-                  目標不是把今天轉正，而是避免虧損後追單。
+                  {state.hasEmotionAffectedTrade
+                    ? "目標不是立刻修復結果，而是確認每一次出手都仍由系統主導。"
+                    : "目標不是把今天轉正，而是避免虧損後追單。"}
                 </div>
               </div>
             ))}
@@ -500,6 +507,7 @@ export default function PracticeTab({ ctx }) {
               style={{ background: C.raised, color: C.text, border: `1px solid ${C.hair}` }}
             />
             <ToggleRow label="符合策略" value={followed} onChange={setFollowed} />
+            <ToggleRow label="受到情緒影響" value={emotionAffected} onChange={setEmotionAffected} />
             <ToggleRow label="設定停損" value={stopLoss} onChange={setStopLoss} />
             <input
               value={rValue}
@@ -577,6 +585,9 @@ export default function PracticeTab({ ctx }) {
                   <span style={{ fontSize: 11, color: t.followed_checklist ? C.sage : C.textFaint }}>
                     {t.followed_checklist ? "符合策略" : "未標記符合"}
                   </span>
+                  {t.emotion_affected === true && (
+                    <span style={{ fontSize: 11, color: "#d6a15f" }}>情緒影響</span>
+                  )}
                   {t.r_value != null && <span style={{ fontSize: 11, color: C.textFaint }}>R {t.r_value}</span>}
                   {t.edited_at && <span style={{ fontSize: 10, color: C.textFaint }}>已編輯</span>}
                 </div>

@@ -162,6 +162,7 @@ Practice is the largest feature module. It owns:
 - trade edit history diffing
 - required-field validation for trade logging
 - account protection state derived per account type from today's trades
+- trade record rewards tracked with `claimedRewards.trade_record_rewards`
 - decision risk monitor trigger
 - risk check response logging
 - successful wait logging
@@ -171,7 +172,9 @@ Practice is the largest feature module. It owns:
 
 This page mixes view layout, form state, validation, reward logic, penalty logic, edit-history generation, and risk flow orchestration.
 
-Account protection is automatic and local to `PracticeTab`. Each trade stores `accountType` as `exam` or `funded`; missing legacy values are treated as `exam`. Each trade may also store `emotion_affected`; missing legacy values are treated as `false`. The page derives protection state separately for each account type by summing today's P&L and checking whether any same-day trade for that account has `pnl < 0` or `emotion_affected === true`. If a negative trade exists, cumulative P&L is below 0, or an emotion-affected trade exists, that account type enters protection. Protection shows an account-specific card and requires the four-item protection confirmation before each later trade form for that same account is available. Protection does not block trade recording, Energy spending, or normal followed-strategy rewards after confirmation. Manual `stopLossMode` remains the higher-priority reward restriction: trades are still recorded through the normal path, but new followed-strategy rewards are not granted while stop-loss mode is active.
+Trade logging rewards honest recordkeeping rather than profitability or strategy quality. In normal mode, the first new trade record of a day grants +40 EXP and execution +1, the second through fourth new trade records grant +10 EXP each, and later records grant no trade-record reward. `claimedRewards.trade_record_rewards` stores the rewarded count, total rewarded EXP, and whether execution has already been granted so editing or deleting trades cannot re-award the same day. `followed_checklist` is a required yes/no quality mark, not an EXP source.
+
+Account protection is automatic and local to `PracticeTab`. Each trade stores `accountType` as `exam` or `funded`; missing legacy values are treated as `exam`. Each trade may also store `emotion_affected`; missing legacy values are treated as `false`. The page derives protection state separately for each account type by summing today's P&L and checking whether any same-day trade for that account has `pnl < 0` or `emotion_affected === true`. If a negative trade exists, cumulative P&L is below 0, or an emotion-affected trade exists, that account type enters protection. Protection shows an account-specific card and requires the four-item protection confirmation before each later trade form for that same account is available. Protection does not block trade recording or Energy spending after confirmation. Manual `stopLossMode` remains the higher-priority reward restriction: trades are still recorded through the normal path and spend Energy, but trade-record rewards and the strategy-trade quality task are not granted by trades added while stop-loss mode is active.
 
 ### `JournalTab`
 

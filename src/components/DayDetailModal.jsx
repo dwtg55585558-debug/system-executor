@@ -89,10 +89,11 @@ export default function DayDetailModal({ date, session, expLog, integrityLog, on
                     {t.symbol} · {t.direction === "long" ? "多" : "空"}
                   </span>
                   <span style={{ color: t.followed_checklist ? C.sage : C.textFaint }}>
-                    {t.followed_checklist ? "符合策略" : "未標記符合"}
+                    符合策略:{t.followed_checklist ? "是" : "否"}
                   </span>
                 </div>
                 <div style={{ fontSize: 11, color: C.textFaint, marginTop: 2 }}>
+                  情緒影響:{t.emotion_affected === true ? "是" : "否"} ·{" "}
                   {t.stop_loss_set ? "已設停損" : "未設停損"}
                   {t.r_value != null ? ` · R ${t.r_value}` : ""}
                   {t.pnl !== null && t.pnl !== undefined ? ` · 盈虧 ${t.pnl}` : ""}

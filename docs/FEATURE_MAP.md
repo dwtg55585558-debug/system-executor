@@ -278,16 +278,23 @@ Trade fields:
 Rules:
 
 - `accountType` is stored on each trade as `exam` or `funded`. Missing legacy values fall back to `exam`.
-- `symbol`, `entry_reason`, checked `followed_checklist`, checked `stop_loss_set`, numeric `r_value`, and numeric `pnl` are required before a trade can be recorded.
+- `symbol`, `entry_reason`, explicit yes/no `followed_checklist`, checked `stop_loss_set`, numeric `r_value`, and numeric `pnl` are required before a trade can be recorded.
 - `notes` is optional.
+- `followed_checklist === false` is valid and records an honest non-strategy trade.
 - `emotion_affected` is optional, defaults to `false`, and marks that the trade was affected by emotion without blocking the trade record.
 - Incomplete required fields show the toast `請完成所有必填交易欄位` and do not spend Energy or award EXP/stats.
-- The first followed-strategy trade of the day awards +40 EXP.
+- If `followed_checklist` has not been selected, the toast `請選擇是否符合策略` is shown and the trade is not recorded.
+- New trade records spend 10 Energy regardless of PnL or whether the trade followed the checklist.
+- Normal-mode trade record rewards are capped daily: the first new trade record grants +40 EXP and execution +1, the second through fourth each grant +10 EXP, and the fifth and later grant no trade-record reward.
+- Trade record reward progress is stored in `day.claimedRewards.trade_record_rewards` as `count`, `exp`, and `executionGranted`.
+- Trade record rewards are only granted on new trade creation. Editing does not grant rewards; deleting does not refund or lower the reward counter.
+- `followed_checklist` no longer grants EXP or execution. It is a quality marker used for the strategy-trade task, calendar completion, review, future achievements, and statistics.
+- `followed_checklist === false` can still receive trade-record rewards in normal mode when the daily trade-record reward cap has not been reached, but it does not complete the strategy-trade task or make the training calendar green.
 - Account protection is derived separately for `exam` and `funded` trades.
 - Protection activates for an account type when any same-day trade for that account has `pnl < 0`, that account's same-day cumulative P&L is below 0, or any same-day trade for that account has `emotion_affected === true`.
 - Protection only affects the matching account type and requires the four-item protection confirmation before each later trade form for that account is shown.
-- Protection does not block recording trades, spending Energy, or normal followed-strategy rewards after confirmation.
-- `stopLossMode` remains the higher-priority reward gate: new followed-strategy trades can still be recorded and spend Energy, but do not award the followed-strategy reward while stop-loss mode is active.
+- Protection does not block recording trades or spending Energy after confirmation.
+- `stopLossMode` remains the higher-priority reward gate: trades can still be recorded and spend Energy, but new trades do not grant trade-record rewards and do not complete the strategy-trade quality task while stop-loss mode is active.
 - Editing a trade appends field-level edit history.
 
 Notes:

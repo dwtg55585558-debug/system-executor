@@ -27,6 +27,37 @@ const PROTECTION_ITEMS = [
   { id: "accept_loss_day", label: "我接受今天可以是虧損日" },
 ];
 
+const EMPTY_TRADE_RECORD_REWARDS = { count: 0, exp: 0, executionGranted: false };
+
+const getTradeRecordRewards = (claimedRewards = {}) => ({
+  ...EMPTY_TRADE_RECORD_REWARDS,
+  ...(claimedRewards?.trade_record_rewards || {}),
+});
+
+const nextTradeRecordReward = (claimedRewards = {}, stopLossMode = false) => {
+  if (stopLossMode) return { exp: 0, statKey: null, next: getTradeRecordRewards(claimedRewards) };
+
+  const current = getTradeRecordRewards(claimedRewards);
+  if (current.count >= 4) return { exp: 0, statKey: null, next: current };
+
+  const count = current.count + 1;
+  const exp = count === 1 ? 40 : 10;
+  const statKey = count === 1 && !current.executionGranted ? "execution" : null;
+
+  return {
+    exp,
+    statKey,
+    next: {
+      count,
+      exp: current.exp + exp,
+      executionGranted: current.executionGranted || statKey === "execution",
+    },
+  };
+};
+
+const hasValidStrategyTrade = (trades, stopLossMode) =>
+  !stopLossMode && trades.some((trade) => trade.followed_checklist === true);
+
 const getAccountProtectionStates = (trades) => {
   const initial = {
     exam: { dailyPnl: 0, hasLossTrade: false, hasEmotionAffectedTrade: false, active: false },
@@ -61,7 +92,7 @@ export default function PracticeTab({ ctx }) {
   const [accountType, setAccountType] = useState("exam");
   const [symbol, setSymbol] = useState("");
   const [direction, setDirection] = useState("long");
-  const [followed, setFollowed] = useState(false);
+  const [followed, setFollowed] = useState(null);
   const [emotionAffected, setEmotionAffected] = useState(false);
   const [stopLoss, setStopLoss] = useState(false);
   const [entryReason, setEntryReason] = useState("");
@@ -118,7 +149,7 @@ export default function PracticeTab({ ctx }) {
     setAccountType("exam");
     setSymbol("");
     setDirection("long");
-    setFollowed(false);
+    setFollowed(null);
     setEmotionAffected(false);
     setStopLoss(false);
     setEntryReason("");
@@ -136,7 +167,7 @@ export default function PracticeTab({ ctx }) {
     setAccountType(getAccountType(trade));
     setSymbol(trade.symbol);
     setDirection(trade.direction);
-    setFollowed(trade.followed_checklist);
+    setFollowed(trade.followed_checklist === true);
     setEmotionAffected(trade.emotion_affected === true);
     setStopLoss(trade.stop_loss_set);
     setEntryReason(trade.entry_reason || "");
@@ -160,7 +191,7 @@ export default function PracticeTab({ ctx }) {
     !!accountType &&
     !!symbol.trim() &&
     !!entryReason.trim() &&
-    followed &&
+    followed !== null &&
     stopLoss &&
     isValidNumberInput(rValue) &&
     isValidNumberInput(pnl);
@@ -170,7 +201,7 @@ export default function PracticeTab({ ctx }) {
     accountType,
     symbol,
     direction,
-    followed_checklist: followed,
+    followed_checklist: followed === true,
     emotion_affected: emotionAffected,
     stop_loss_set: stopLoss,
     entry_reason: entryReason.trim(),
@@ -205,10 +236,6 @@ export default function PracticeTab({ ctx }) {
       if (idx < 0) return;
 
       const old = latestDay.trades[idx];
-      const otherFollowedExists = latestDay.trades.some((t, i) => i !== idx && t.followed_checklist);
-      const shouldAwardFollowed = tradeData.followed_checklist && !old.followed_checklist && !otherFollowedExists;
-      const blockedByStopLossMode = shouldAwardFollowed && latestDay.stopLossMode;
-
       const changes = diffTrade(old, tradeData);
       const finalTrade = {
         ...tradeData,
@@ -217,29 +244,38 @@ export default function PracticeTab({ ctx }) {
       };
       const newTrades = [...latestDay.trades];
       newTrades[idx] = finalTrade;
-      updateDay((d) => ({ ...d, trades: newTrades, strategy_trade: d.strategy_trade || (shouldAwardFollowed && !blockedByStopLossMode) }));
-      if (blockedByStopLossMode) {
-        showToast("止血模式中｜今日不再獎勵新增交易", "info");
-      } else if (shouldAwardFollowed) {
-        addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
-        showToast("符合策略交易｜EXP +40｜執行 +1", "reward");
-      } else {
-        showToast("已更新交易", "info");
-      }
+      updateDay((d) => ({
+        ...d,
+        trades: newTrades,
+        strategy_trade: hasValidStrategyTrade(newTrades, d.stopLossMode),
+      }));
+      showToast("已更新交易", "info");
     } else {
-      const alreadyAwarded = latestDay.trades.some((t) => t.followed_checklist);
-      const shouldAwardFollowed = tradeData.followed_checklist && !alreadyAwarded;
-      const blockedByStopLossMode = shouldAwardFollowed && latestDay.stopLossMode;
+      const reward = nextTradeRecordReward(latestDay.claimedRewards, latestDay.stopLossMode);
 
-      updateDay((d) => ({ ...d, trades: [...d.trades, tradeData], strategy_trade: d.strategy_trade || (shouldAwardFollowed && !blockedByStopLossMode) }));
+      updateDay((d) => {
+        const newTrades = [...d.trades, tradeData];
+        return {
+          ...d,
+          trades: newTrades,
+          strategy_trade: hasValidStrategyTrade(newTrades, d.stopLossMode),
+          claimedRewards:
+            reward.exp > 0
+              ? {
+                  ...(d.claimedRewards || {}),
+                  trade_record_rewards: reward.next,
+                }
+              : d.claimedRewards,
+        };
+      });
       spendEnergy(10);
-      if (blockedByStopLossMode) {
-        showToast("止血模式中｜今日不再獎勵新增交易", "info");
-      } else if (shouldAwardFollowed) {
-        addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
-        showToast("符合策略交易｜EXP +40｜執行 +1", "reward");
+      if (reward.exp > 0) {
+        addReward({ exp: reward.exp, label: "交易紀錄", statKey: reward.statKey });
+        showToast(reward.statKey ? "交易紀錄｜EXP +40｜執行 +1｜Energy -10" : `交易紀錄｜EXP +${reward.exp}｜Energy -10`, "reward");
+      } else if (latestDay.stopLossMode) {
+        showToast("止血模式中｜已記錄交易｜Energy -10｜不發放交易紀錄獎勵", "info");
       } else {
-        showToast("已記錄交易", "info");
+        showToast("已記錄交易｜Energy -10｜今日交易紀錄獎勵已達上限", "info");
       }
     }
     resetForm();
@@ -260,6 +296,10 @@ export default function PracticeTab({ ctx }) {
   };
 
   const submitTrade = () => {
+    if (followed === null) {
+      showToast("請選擇是否符合策略", "info");
+      return;
+    }
     if (!requiredTradeFieldsComplete) {
       showToast("請完成所有必填交易欄位", "info");
       return;
@@ -506,7 +546,32 @@ export default function PracticeTab({ ctx }) {
               className="w-full rounded-lg px-3 py-2 text-sm outline-none mb-2"
               style={{ background: C.raised, color: C.text, border: `1px solid ${C.hair}` }}
             />
-            <ToggleRow label="符合策略" value={followed} onChange={setFollowed} />
+            <div className="mb-2">
+              <div style={{ color: C.textFaint, fontSize: 12, marginBottom: 6 }}>符合策略</div>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: true, label: "是，符合策略" },
+                  { value: false, label: "否，不符合策略" },
+                ].map((option) => {
+                  const selected = followed === option.value;
+                  return (
+                    <button
+                      key={String(option.value)}
+                      type="button"
+                      onClick={() => setFollowed(option.value)}
+                      className="rounded-lg py-2 text-xs"
+                      style={{
+                        background: selected ? C.raised2 : C.raised,
+                        border: `1px solid ${selected ? C.goldDim : C.hair}`,
+                        color: selected ? C.text : C.textFaint,
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <ToggleRow label="受到情緒影響" value={emotionAffected} onChange={setEmotionAffected} />
             <ToggleRow label="設定停損" value={stopLoss} onChange={setStopLoss} />
             <input
@@ -583,7 +648,7 @@ export default function PracticeTab({ ctx }) {
                     {ACCOUNT_TYPE_LABEL[getAccountType(t)]}
                   </span>
                   <span style={{ fontSize: 11, color: t.followed_checklist ? C.sage : C.textFaint }}>
-                    {t.followed_checklist ? "符合策略" : "未標記符合"}
+                    {t.followed_checklist ? "符合策略" : "不符合策略"}
                   </span>
                   {t.emotion_affected === true && (
                     <span style={{ fontSize: 11, color: "#d6a15f" }}>情緒影響</span>

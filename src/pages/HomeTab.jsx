@@ -39,7 +39,7 @@ export default function HomeTab({ ctx }) {
     { id: "reading", label: "閱讀", exp: 20, statKey: "insight" },
   ];
 
-  const followedToday = day.strategy_trade === false ? false : day.trades.some((t) => t.followed_checklist);
+  const followedToday = day.strategy_trade === true;
   const stopLossMode = !!day.stopLossMode;
   const gapDays = journalGapDays(data.history);
 
@@ -55,11 +55,11 @@ export default function HomeTab({ ctx }) {
     { key: "checklist_pass", label: "交易前 Checklist", exp: 20, done: day.checklist_pass, manual: false },
     {
       key: "followed",
-      label: "有符合策略才進場",
-      exp: stopLossMode ? null : 40,
+      label: "符合策略交易",
+      exp: null,
       done: followedToday,
       manual: false,
-      note: stopLossMode ? "止血模式：今日暫停新增交易獎勵" : null,
+      note: stopLossMode ? "止血模式：此模式下新增交易不完成品質標記" : "品質標記｜完成今日系統執行",
     },
     { key: "wait", label: "沒有機會、成功等待", exp: 50, done: day.successful_wait, manual: false },
     { key: "stoploss", label: "完整停損", exp: null, done: day.trades.some((t) => t.stop_loss_set), manual: false },
@@ -373,7 +373,7 @@ export default function HomeTab({ ctx }) {
                 允許：復盤、日誌、閱讀、健身
               </div>
               <div style={{ color: C.textDim, fontSize: 12, lineHeight: 1.55 }}>
-                暫停：新增交易任務獎勵、追單、補回虧損
+                暫停：交易紀錄獎勵、符合策略品質標記、追單、補回虧損
               </div>
             </div>
           </div>

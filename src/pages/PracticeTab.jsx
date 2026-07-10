@@ -20,27 +20,36 @@ const ACCOUNT_TYPE_LABEL = {
 
 const getAccountType = (trade) => (trade.accountType === "funded" ? "funded" : "exam");
 
-const getFundedProtectionState = (trades) => {
-  const fundedTrades = trades
-    .filter((trade) => getAccountType(trade) === "funded")
-    .sort((a, b) => (a.ts || 0) - (b.ts || 0));
-  let cumulative = 0;
-  let enteredLoss = false;
-  let afterLossCount = 0;
+const PROTECTION_ITEMS = [
+  { id: "valid_stop", label: "止損放在符合策略位置" },
+  { id: "stop_after_loss", label: "如果這筆虧損，今天不再交易" },
+  { id: "not_recovery_trade", label: "這筆不是為了把今天轉正" },
+  { id: "accept_loss_day", label: "我接受今天可以是虧損日" },
+];
 
-  fundedTrades.forEach((trade) => {
-    if (enteredLoss) afterLossCount += 1;
-    cumulative += trade.pnl == null ? 0 : Number(trade.pnl) || 0;
-    if (!enteredLoss && cumulative < 0) enteredLoss = true;
-  });
-
-  const active = cumulative < 0;
-  return {
-    fundedDailyPnl: cumulative,
-    active,
-    afterLossCount,
-    locked: active && afterLossCount >= 1,
+const getAccountProtectionStates = (trades) => {
+  const initial = {
+    exam: { dailyPnl: 0, hasLossTrade: false, active: false },
+    funded: { dailyPnl: 0, hasLossTrade: false, active: false },
   };
+
+  const states = trades.reduce((acc, trade) => {
+    const type = getAccountType(trade);
+    const pnlValue = trade.pnl == null ? 0 : Number(trade.pnl) || 0;
+    acc[type].dailyPnl += pnlValue;
+    if (trade.pnl != null && pnlValue < 0) acc[type].hasLossTrade = true;
+    return acc;
+  }, initial);
+
+  return Object.fromEntries(
+    Object.entries(states).map(([type, state]) => [
+      type,
+      {
+        ...state,
+        active: state.hasLossTrade || state.dailyPnl < 0,
+      },
+    ])
+  );
 };
 
 export default function PracticeTab({ ctx }) {
@@ -51,17 +60,25 @@ export default function PracticeTab({ ctx }) {
   const [accountType, setAccountType] = useState("exam");
   const [symbol, setSymbol] = useState("");
   const [direction, setDirection] = useState("long");
-  const [followed, setFollowed] = useState(true);
-  const [stopLoss, setStopLoss] = useState(true);
+  const [followed, setFollowed] = useState(false);
+  const [stopLoss, setStopLoss] = useState(false);
   const [entryReason, setEntryReason] = useState("");
   const [rValue, setRValue] = useState("");
   const [notes, setNotes] = useState("");
   const [pnl, setPnl] = useState("");
   const [confirmViolation, setConfirmViolation] = useState(null);
   const [riskCheck, setRiskCheck] = useState(null);
+  const [protectionConfirmedForCurrentTrade, setProtectionConfirmedForCurrentTrade] = useState(false);
+  const [protectionChecks, setProtectionChecks] = useState({});
+  const [emotionProtectionRequired, setEmotionProtectionRequired] = useState(false);
   const [calibrationChecks, setCalibrationChecks] = useState({});
   const executionGoal = "只在符合系統時進場";
-  const fundedProtection = getFundedProtectionState(day.trades);
+  const accountProtection = getAccountProtectionStates(day.trades);
+  const activeProtectionTypes = Object.entries(accountProtection).filter(([, state]) => state.active);
+  const selectedAccountNeedsProtection = !editingId && accountProtection[accountType].active;
+  const mustCompleteProtectionBeforeForm =
+    !editingId && (emotionProtectionRequired || (selectedAccountNeedsProtection && !protectionConfirmedForCurrentTrade));
+  const allProtectionChecksDone = PROTECTION_ITEMS.every((item) => protectionChecks[item.id]);
 
   const morningCalibrationItems = [
     { id: "process_goal", label: "今天不以賺錢為目標，只以執行系統為目標" },
@@ -99,13 +116,16 @@ export default function PracticeTab({ ctx }) {
     setAccountType("exam");
     setSymbol("");
     setDirection("long");
-    setFollowed(true);
-    setStopLoss(true);
+    setFollowed(false);
+    setStopLoss(false);
     setEntryReason("");
     setRValue("");
     setNotes("");
     setPnl("");
     setEditingId(null);
+    setProtectionConfirmedForCurrentTrade(false);
+    setProtectionChecks({});
+    setEmotionProtectionRequired(false);
   };
 
   const startEdit = (trade) => {
@@ -119,12 +139,27 @@ export default function PracticeTab({ ctx }) {
     setRValue(trade.r_value != null ? String(trade.r_value) : "");
     setNotes(trade.notes || "");
     setPnl(trade.pnl != null ? String(trade.pnl) : "");
+    setProtectionConfirmedForCurrentTrade(false);
+    setProtectionChecks({});
+    setEmotionProtectionRequired(false);
   };
 
-  // System Validation: 符合策略 = YES 時,進場理由/停損/R Risk 缺一則禁止送出
-  const validationMissing = followed
-    ? [!entryReason.trim() && "進場理由", !stopLoss && "停損", rValue === "" && "R Risk"].filter(Boolean)
-    : [];
+  const setSelectedAccountType = (type) => {
+    setAccountType(type);
+    setProtectionConfirmedForCurrentTrade(false);
+    setProtectionChecks({});
+    setEmotionProtectionRequired(false);
+  };
+
+  const isValidNumberInput = (value) => value !== "" && Number.isFinite(Number(value));
+  const requiredTradeFieldsComplete =
+    !!accountType &&
+    !!symbol.trim() &&
+    !!entryReason.trim() &&
+    followed &&
+    stopLoss &&
+    isValidNumberInput(rValue) &&
+    isValidNumberInput(pnl);
 
   const buildTrade = () => ({
     id: editingId || uid(),
@@ -146,9 +181,15 @@ export default function PracticeTab({ ctx }) {
     return fields.filter((f) => oldT[f] !== newT[f]).map((f) => ({ field: f, old_value: oldT[f], new_value: newT[f], edited_at: now }));
   };
 
-  const blocksFundedStrategyReward = (tradeData, latestDay) => {
-    const protection = getFundedProtectionState(latestDay.trades);
-    return getAccountType(tradeData) === "funded" && tradeData.followed_checklist && protection.locked;
+  const toggleProtectionCheck = (id) => {
+    setProtectionChecks((checks) => ({ ...checks, [id]: !checks[id] }));
+  };
+
+  const completeProtectionConfirm = () => {
+    if (!allProtectionChecksDone) return;
+    setProtectionConfirmedForCurrentTrade(true);
+    setProtectionChecks({});
+    setEmotionProtectionRequired(false);
   };
 
   const commitTrade = (tradeData) => {
@@ -161,13 +202,7 @@ export default function PracticeTab({ ctx }) {
       const old = latestDay.trades[idx];
       const otherFollowedExists = latestDay.trades.some((t, i) => i !== idx && t.followed_checklist);
       const shouldAwardFollowed = tradeData.followed_checklist && !old.followed_checklist && !otherFollowedExists;
-
-      if (shouldAwardFollowed && latestDay.stopLossMode) {
-        showToast("止血模式中｜今日不再獎勵新增交易", "info");
-        return;
-      }
-
-      const blockedByFundedProtection = shouldAwardFollowed && blocksFundedStrategyReward(tradeData, latestDay);
+      const blockedByStopLossMode = shouldAwardFollowed && latestDay.stopLossMode;
 
       const changes = diffTrade(old, tradeData);
       const finalTrade = {
@@ -177,9 +212,9 @@ export default function PracticeTab({ ctx }) {
       };
       const newTrades = [...latestDay.trades];
       newTrades[idx] = finalTrade;
-      updateDay((d) => ({ ...d, trades: newTrades, strategy_trade: d.strategy_trade || (shouldAwardFollowed && !blockedByFundedProtection) }));
-      if (blockedByFundedProtection) {
-        showToast("出金帳戶保護中｜今日不再獎勵新增交易", "info");
+      updateDay((d) => ({ ...d, trades: newTrades, strategy_trade: d.strategy_trade || (shouldAwardFollowed && !blockedByStopLossMode) }));
+      if (blockedByStopLossMode) {
+        showToast("止血模式中｜今日不再獎勵新增交易", "info");
       } else if (shouldAwardFollowed) {
         addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
         showToast("符合策略交易｜EXP +40｜執行 +1", "reward");
@@ -189,18 +224,12 @@ export default function PracticeTab({ ctx }) {
     } else {
       const alreadyAwarded = latestDay.trades.some((t) => t.followed_checklist);
       const shouldAwardFollowed = tradeData.followed_checklist && !alreadyAwarded;
+      const blockedByStopLossMode = shouldAwardFollowed && latestDay.stopLossMode;
 
-      if (shouldAwardFollowed && latestDay.stopLossMode) {
-        showToast("止血模式中｜今日不再獎勵新增交易", "info");
-        return;
-      }
-
-      const blockedByFundedProtection = shouldAwardFollowed && blocksFundedStrategyReward(tradeData, latestDay);
-
-      updateDay((d) => ({ ...d, trades: [...d.trades, tradeData], strategy_trade: d.strategy_trade || (shouldAwardFollowed && !blockedByFundedProtection) }));
+      updateDay((d) => ({ ...d, trades: [...d.trades, tradeData], strategy_trade: d.strategy_trade || (shouldAwardFollowed && !blockedByStopLossMode) }));
       spendEnergy(10);
-      if (blockedByFundedProtection) {
-        showToast("出金帳戶保護中｜今日不再獎勵新增交易", "info");
+      if (blockedByStopLossMode) {
+        showToast("止血模式中｜今日不再獎勵新增交易", "info");
       } else if (shouldAwardFollowed) {
         addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
         showToast("符合策略交易｜EXP +40｜執行 +1", "reward");
@@ -213,35 +242,31 @@ export default function PracticeTab({ ctx }) {
   };
 
   const respondRiskCheck = (response) => {
-    if (response === "following_system" && latestDayRef.current.stopLossMode) {
-      showToast("止血模式中｜今日不再獎勵新增交易", "info");
+    updateDay((d) => ({ ...d, riskEvents: [...d.riskEvents, { reasons: riskCheck.reasons, response, ts: Date.now() }] }));
+    if (response === "emotionally_driven") {
       setRiskCheck(null);
+      setProtectionConfirmedForCurrentTrade(false);
+      setProtectionChecks({});
+      setEmotionProtectionRequired(true);
+      showToast("誠實標記本身,就是紀律的一部分。", "info");
       return;
     }
-
-    updateDay((d) => ({ ...d, riskEvents: [...d.riskEvents, { reasons: riskCheck.reasons, response, ts: Date.now() }] }));
     commitTrade(riskCheck.trade);
-    if (response === "emotionally_driven") {
-      showToast("誠實標記本身,就是紀律的一部分。", "info");
-    }
   };
 
   const submitTrade = () => {
-    if (!symbol.trim()) {
-      showToast("請輸入交易標的", "info");
+    if (!requiredTradeFieldsComplete) {
+      showToast("請完成所有必填交易欄位", "info");
       return;
     }
-    if (validationMissing.length > 0) return;
+    if (selectedAccountNeedsProtection && !protectionConfirmedForCurrentTrade) {
+      return;
+    }
     const trade = buildTrade();
     if (!editingId) {
       const reasons = detectRiskConditions(day, data.history);
-      const needsFundedProtectionConfirm =
-        getAccountType(trade) === "funded" &&
-        trade.followed_checklist &&
-        fundedProtection.active &&
-        !fundedProtection.locked;
-      if (reasons.length > 0 || needsFundedProtectionConfirm) {
-        setRiskCheck({ trade, reasons, fundedProtectionConfirm: needsFundedProtectionConfirm });
+      if (reasons.length > 0) {
+        setRiskCheck({ trade, reasons });
         return;
       }
     }
@@ -377,25 +402,30 @@ export default function PracticeTab({ ctx }) {
 
       <SectionLabel>{editingId ? "編輯交易" : "記錄交易"}</SectionLabel>
       <Card>
-        {fundedProtection.active && (
-          <div className="rounded-lg p-3 mb-3" style={{ background: "rgba(116,43,43,0.16)", border: "1px solid rgba(203,120,72,0.42)" }}>
-            <div style={{ fontSize: 12, color: "#d6a15f", fontWeight: 800, marginBottom: 5 }}>
-              出金帳戶保護中
-            </div>
-            <div style={{ fontSize: 12.5, color: C.textDim, lineHeight: 1.55 }}>
-              你今天的出金帳戶已進入虧損狀態，下一筆交易需要額外確認。
-            </div>
-            <div style={{ fontSize: 11.5, color: C.textFaint, lineHeight: 1.5, marginTop: 5 }}>
-              目標不是把今天轉正，而是避免虧損後追單。
-            </div>
+        {activeProtectionTypes.length > 0 && (
+          <div className="space-y-2 mb-3">
+            {activeProtectionTypes.map(([type]) => (
+              <div key={type} className="rounded-lg p-3" style={{ background: "rgba(116,43,43,0.16)", border: "1px solid rgba(203,120,72,0.42)" }}>
+                <div style={{ fontSize: 12, color: "#d6a15f", fontWeight: 800, marginBottom: 5 }}>
+                  {ACCOUNT_TYPE_LABEL[type]}保護中
+                </div>
+                <div style={{ fontSize: 12.5, color: C.textDim, lineHeight: 1.55 }}>
+                  今天此帳戶已出現虧損紀錄，後續每一筆交易前都需要完成保護確認。
+                </div>
+                <div style={{ fontSize: 11.5, color: C.textFaint, lineHeight: 1.5, marginTop: 5 }}>
+                  目標不是把今天轉正，而是避免虧損後追單。
+                </div>
+              </div>
+            ))}
           </div>
         )}
+
         <div className="flex gap-2 mb-2">
           {["exam", "funded"].map((type) => (
             <button
               key={type}
               type="button"
-              onClick={() => setAccountType(type)}
+              onClick={() => setSelectedAccountType(type)}
               className="flex-1 rounded-lg py-1.5 text-xs"
               style={{
                 background: accountType === type ? C.raised2 : C.raised,
@@ -407,106 +437,123 @@ export default function PracticeTab({ ctx }) {
             </button>
           ))}
         </div>
-        <input
-          value={symbol}
-          onChange={(e) => setSymbol(e.target.value)}
-          placeholder="標的,例如 BTC / TSLA"
-          className="w-full rounded-lg px-3 py-2 text-sm outline-none mb-2"
-          style={{ background: C.raised, color: C.text, border: `1px solid ${C.hair}` }}
-        />
-        <div className="flex gap-2 mb-2">
-          {["long", "short"].map((d) => (
+
+        {mustCompleteProtectionBeforeForm ? (
+          <div className="rounded-lg p-3" style={{ background: "rgba(203,163,95,0.08)", border: `1px solid ${C.goldDim}` }}>
+            <div style={{ fontSize: 12, color: C.gold, fontWeight: 800, marginBottom: 8 }}>
+              {emotionProtectionRequired ? "系統執行者身份確認" : `${ACCOUNT_TYPE_LABEL[accountType]}保護確認`}
+            </div>
+            <div style={{ display: "grid", gap: 8 }} className="mb-3">
+              {PROTECTION_ITEMS.map((item) => {
+                const checked = !!protectionChecks[item.id];
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => toggleProtectionCheck(item.id)}
+                    className="flex w-full items-start gap-2 rounded-lg p-2 text-left"
+                    style={{
+                      background: C.raised,
+                      border: `1px solid ${checked ? C.goldDim : C.hair}`,
+                      color: checked ? C.text : C.textDim,
+                    }}
+                  >
+                    <span style={{ color: checked ? C.gold : C.textFaint, lineHeight: 1 }}>
+                      {checked ? "✓" : "□"}
+                    </span>
+                    <span style={{ fontSize: 12, lineHeight: 1.45 }}>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="rounded-lg px-3 py-2 mb-3" style={{ background: C.raised, border: `1px solid ${C.hair}`, color: C.textDim, fontSize: 12.5, lineHeight: 1.55 }}>
+              我現在不是在修復損益，而是在確認自己仍然是系統執行者。
+            </div>
             <button
-              key={d}
-              onClick={() => setDirection(d)}
-              className="flex-1 rounded-lg py-1.5 text-xs"
+              type="button"
+              onClick={completeProtectionConfirm}
+              disabled={!allProtectionChecksDone}
+              className="w-full rounded-lg py-2 text-sm font-medium"
               style={{
-                background: direction === d ? C.raised2 : C.raised,
-                border: `1px solid ${direction === d ? C.violet : C.hair}`,
-                color: direction === d ? C.text : C.textFaint,
+                background: allProtectionChecksDone ? C.goldDim : C.raised,
+                color: allProtectionChecksDone ? C.text : C.textFaint,
               }}
             >
-              {d === "long" ? "做多" : "做空"}
+              完成保護確認
             </button>
-          ))}
-        </div>
-        <ToggleRow label="符合我的策略" value={followed} onChange={setFollowed} />
-        <ToggleRow label="已設定停損" value={stopLoss} onChange={setStopLoss} />
-
-        {followed && (
+          </div>
+        ) : (
           <>
+            <input
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              placeholder="標的,例如 NQ"
+              className="w-full rounded-lg px-3 py-2 text-sm outline-none mb-2"
+              style={{ background: C.raised, color: C.text, border: `1px solid ${C.hair}` }}
+            />
             <input
               value={entryReason}
               onChange={(e) => setEntryReason(e.target.value)}
               placeholder="進場理由"
               maxLength={80}
+              className="w-full rounded-lg px-3 py-2 text-sm outline-none mb-2"
+              style={{ background: C.raised, color: C.text, border: `1px solid ${C.hair}` }}
+            />
+            <ToggleRow label="符合策略" value={followed} onChange={setFollowed} />
+            <ToggleRow label="設定停損" value={stopLoss} onChange={setStopLoss} />
+            <input
+              value={rValue}
+              onChange={(e) => setRValue(e.target.value)}
+              placeholder="R 值"
               className="w-full rounded-lg px-3 py-2 text-sm outline-none mt-2"
               style={{ background: C.raised, color: C.text, border: `1px solid ${C.hair}` }}
             />
             <input
-              value={rValue}
-              onChange={(e) => setRValue(e.target.value)}
-              placeholder="R Risk,例如 1.5"
+              value={pnl}
+              onChange={(e) => setPnl(e.target.value)}
+              placeholder="盈虧"
               className="w-full rounded-lg px-3 py-2 text-sm outline-none mt-2"
               style={{ background: C.raised, color: C.text, border: `1px solid ${C.hair}` }}
             />
+            <input
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="備註(選填)"
+              maxLength={80}
+              className="w-full rounded-lg px-3 py-2 text-sm outline-none mt-2 mb-3"
+              style={{ background: C.raised, color: C.text, border: `1px solid ${C.hair}` }}
+            />
+
+            {!requiredTradeFieldsComplete && (
+              <div className="rounded-lg p-3 mb-3" style={{ background: C.raised, border: `1px solid ${C.ashDim}` }}>
+                <div style={{ fontSize: 11, color: C.ash, letterSpacing: 1 }} className="uppercase mb-1.5">
+                  System Validation
+                </div>
+                <div style={{ fontSize: 12, color: C.textDim }}>
+                  除備註以外，所有交易欄位都需要完成。
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              {editingId && (
+                <button onClick={resetForm} className="flex-1 rounded-lg py-2 text-sm" style={{ background: C.raised, color: C.textDim }}>
+                  取消編輯
+                </button>
+              )}
+              <button
+                onClick={submitTrade}
+                className="flex-1 rounded-lg py-2 text-sm font-medium"
+                style={{ background: C.violetDim, color: C.text }}
+              >
+                {editingId ? "儲存修改" : "記錄這筆交易"}
+              </button>
+            </div>
+            <div style={{ fontSize: 10.5, color: C.textFaint, marginTop: 8 }} className="text-center">
+              今天可以記錄任意筆數,沒有次數限制
+            </div>
           </>
         )}
-
-        <input
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="備註(選填)"
-          maxLength={80}
-          className="w-full rounded-lg px-3 py-2 text-sm outline-none mt-2"
-          style={{ background: C.raised, color: C.text, border: `1px solid ${C.hair}` }}
-        />
-        <input
-          value={pnl}
-          onChange={(e) => setPnl(e.target.value)}
-          placeholder="盈虧(選填,僅記錄,不影響 EXP)"
-          className="w-full rounded-lg px-3 py-2 text-sm outline-none mt-2 mb-3"
-          style={{ background: C.raised, color: C.textDim, border: `1px solid ${C.hair}` }}
-        />
-
-        {followed && validationMissing.length > 0 && (
-          <div className="rounded-lg p-3 mb-3" style={{ background: C.raised, border: `1px solid ${C.ashDim}` }}>
-            <div style={{ fontSize: 11, color: C.ash, letterSpacing: 1 }} className="uppercase mb-1.5">
-              System Validation
-            </div>
-            <div style={{ fontSize: 12, color: C.textDim, marginBottom: 6 }}>符合策略必須包含進場理由、停損、R Risk：</div>
-            {["進場理由", "停損", "R Risk"].map((f) => (
-              <div key={f} className="flex items-center gap-1.5 py-0.5" style={{ fontSize: 12 }}>
-                <span style={{ color: validationMissing.includes(f) ? C.ash : C.sage }}>
-                  {validationMissing.includes(f) ? "✗" : "✓"}
-                </span>
-                <span style={{ color: C.textDim }}>{f}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="flex gap-2">
-          {editingId && (
-            <button onClick={resetForm} className="flex-1 rounded-lg py-2 text-sm" style={{ background: C.raised, color: C.textDim }}>
-              取消編輯
-            </button>
-          )}
-          <button
-            onClick={submitTrade}
-            disabled={followed && validationMissing.length > 0}
-            className="flex-1 rounded-lg py-2 text-sm font-medium"
-            style={{
-              background: followed && validationMissing.length > 0 ? C.raised : C.violetDim,
-              color: followed && validationMissing.length > 0 ? C.textFaint : C.text,
-            }}
-          >
-            {editingId ? "儲存修改" : "記錄這筆交易"}
-          </button>
-        </div>
-        <div style={{ fontSize: 10.5, color: C.textFaint, marginTop: 8 }} className="text-center">
-          今天可以記錄任意筆數,沒有次數限制
-        </div>
       </Card>
 
       {day.trades.length > 0 && (

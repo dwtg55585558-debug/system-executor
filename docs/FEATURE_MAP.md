@@ -277,20 +277,20 @@ Trade fields:
 Rules:
 
 - `accountType` is stored on each trade as `exam` or `funded`. Missing legacy values fall back to `exam`.
-- `symbol` is required.
-- If `followed_checklist` is true, the trade requires:
-  - entry reason
-  - stop loss
-  - R risk
+- `symbol`, `entry_reason`, checked `followed_checklist`, checked `stop_loss_set`, numeric `r_value`, and numeric `pnl` are required before a trade can be recorded.
+- `notes` is optional.
+- Incomplete required fields show the toast `請完成所有必填交易欄位` and do not spend Energy or award EXP/stats.
 - The first followed-strategy trade of the day awards +40 EXP.
-- `fundedDailyPnl` is derived from today's `funded` trades by summing their optional `pnl` values.
-- Funded account protection activates when `fundedDailyPnl < 0`.
-- After the funded account first enters a daily loss state, only one later funded followed-strategy trade can remain eligible for the followed-strategy reward. Once that post-loss funded trade exists, new funded followed-strategy records are still saved, still spend Energy through the normal trade path, but do not award EXP, do not increase execution, and do not complete `strategy_trade`.
+- Account protection is derived separately for `exam` and `funded` trades.
+- Protection activates for an account type when any same-day trade for that account has `pnl < 0`, or when that account's same-day cumulative P&L is below 0.
+- Protection only affects the matching account type and requires the four-item protection confirmation before each later trade form for that account is shown.
+- Protection does not block recording trades, spending Energy, or normal followed-strategy rewards after confirmation.
+- `stopLossMode` remains the higher-priority reward gate: new followed-strategy trades can still be recorded and spend Energy, but do not award the followed-strategy reward while stop-loss mode is active.
 - Editing a trade appends field-level edit history.
 
 Notes:
 
-- PnL is accepted as optional context and does not affect EXP.
+- PnL is required for trade logging so account protection can activate from negative values. PnL does not directly affect EXP.
 
 ### Decision Risk Monitor
 
@@ -316,7 +316,8 @@ Behavior:
 
 - New trades can trigger a `SystemCheckModal`.
 - User response is stored in `day.riskEvents`.
-- The trade is committed after the response.
+- Choosing `我現在依照系統` commits the pending trade through the normal trade path.
+- Choosing `我現在受到情緒影響` does not commit the trade. It closes the modal and requires the four-item protection confirmation before the trade form is available again.
 
 ### Successful Wait
 

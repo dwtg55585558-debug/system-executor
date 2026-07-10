@@ -160,8 +160,8 @@ Practice is the largest feature module. It owns:
 - trade creation and editing
 - new trade energy spending
 - trade edit history diffing
-- system validation for followed-strategy trades
-- funded account protection state derived from today's funded trades
+- required-field validation for trade logging
+- account protection state derived per account type from today's trades
 - decision risk monitor trigger
 - risk check response logging
 - successful wait logging
@@ -171,7 +171,7 @@ Practice is the largest feature module. It owns:
 
 This page mixes view layout, form state, validation, reward logic, penalty logic, edit-history generation, and risk flow orchestration.
 
-Funded account protection is automatic and local to `PracticeTab`. Each trade stores `accountType` as `exam` or `funded`; missing legacy values are treated as `exam`. The page derives `fundedDailyPnl` by summing today's funded trade `pnl` values. When `fundedDailyPnl < 0`, the UI shows the funded protection card. After the funded account first enters a daily loss state, one later funded followed-strategy trade can still be a reward candidate; once that later funded trade exists, additional funded followed-strategy records are saved and spend Energy normally but do not call `addReward`, do not increase execution, and do not set `strategy_trade`. Manual `stopLossMode` remains the higher-priority restriction.
+Account protection is automatic and local to `PracticeTab`. Each trade stores `accountType` as `exam` or `funded`; missing legacy values are treated as `exam`. The page derives protection state separately for each account type by summing today's P&L and checking whether any same-day trade for that account has `pnl < 0`. If either a negative trade exists or cumulative P&L is below 0, that account type enters protection. Protection shows an account-specific card and requires the four-item protection confirmation before each later trade form for that same account is available. Protection does not block trade recording, Energy spending, or normal followed-strategy rewards after confirmation. Manual `stopLossMode` remains the higher-priority reward restriction: trades are still recorded through the normal path, but new followed-strategy rewards are not granted while stop-loss mode is active.
 
 ### `JournalTab`
 

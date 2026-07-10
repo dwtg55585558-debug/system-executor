@@ -2,22 +2,22 @@ import React, { useState } from "react";
 import { C } from "../styles/theme.js";
 import { RISK_REASON_LABEL } from "../utils/constants.js";
 
-const FUNDED_PROTECTION_ITEMS = [
-  { id: "invalid_stop", label: "這筆止損放在策略失效位置" },
+const PROTECTION_ITEMS = [
+  { id: "valid_stop", label: "止損放在符合策略位置" },
   { id: "stop_after_loss", label: "如果這筆虧損，今天不再交易" },
   { id: "not_recovery_trade", label: "這筆不是為了把今天轉正" },
   { id: "accept_loss_day", label: "我接受今天可以是虧損日" },
 ];
 
 export default function SystemCheckModal({ riskCheck, onRespond, onClose }) {
-  const [fundedChecks, setFundedChecks] = useState({});
-  const needsFundedConfirm = !!riskCheck.fundedProtectionConfirm;
+  const [protectionChecks, setProtectionChecks] = useState({});
+  const needsProtectionConfirm = !!riskCheck.protectionConfirm;
   const hasRiskReasons = riskCheck.reasons.length > 0;
-  const allFundedChecksDone = FUNDED_PROTECTION_ITEMS.every((item) => fundedChecks[item.id]);
-  const canFollowSystem = !needsFundedConfirm || allFundedChecksDone;
+  const allProtectionChecksDone = PROTECTION_ITEMS.every((item) => protectionChecks[item.id]);
+  const canFollowSystem = !needsProtectionConfirm || allProtectionChecksDone;
 
-  const toggleFundedCheck = (id) => {
-    setFundedChecks((checks) => ({ ...checks, [id]: !checks[id] }));
+  const toggleProtectionCheck = (id) => {
+    setProtectionChecks((checks) => ({ ...checks, [id]: !checks[id] }));
   };
 
   return (
@@ -37,7 +37,7 @@ export default function SystemCheckModal({ riskCheck, onRespond, onClose }) {
             ×
           </button>
         )}
-        <div style={{ color: needsFundedConfirm ? C.gold : C.violet, fontSize: 11, letterSpacing: 2 }} className="uppercase mb-2">
+        <div style={{ color: needsProtectionConfirm ? C.gold : C.violet, fontSize: 11, letterSpacing: 2 }} className="uppercase mb-2">
           System Check
         </div>
         {hasRiskReasons && (
@@ -49,19 +49,19 @@ export default function SystemCheckModal({ riskCheck, onRespond, onClose }) {
             ))}
           </div>
         )}
-        {needsFundedConfirm && (
+        {needsProtectionConfirm && (
           <div className="mb-4">
             <div style={{ fontSize: 12.5, color: C.text, fontWeight: 700, marginBottom: 8 }}>
-              出金帳戶保護確認
+              帳戶保護確認
             </div>
             <div className="space-y-2">
-              {FUNDED_PROTECTION_ITEMS.map((item) => {
-                const checked = !!fundedChecks[item.id];
+              {PROTECTION_ITEMS.map((item) => {
+                const checked = !!protectionChecks[item.id];
                 return (
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => toggleFundedCheck(item.id)}
+                    onClick={() => toggleProtectionCheck(item.id)}
                     className="flex w-full items-start gap-2 rounded-lg p-2 text-left"
                     style={{
                       background: C.raised,

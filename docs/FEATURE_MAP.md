@@ -261,6 +261,7 @@ Reward:
 Trade fields:
 
 - `id`
+- `accountType`
 - `symbol`
 - `direction`
 - `followed_checklist`
@@ -275,12 +276,16 @@ Trade fields:
 
 Rules:
 
+- `accountType` is stored on each trade as `exam` or `funded`. Missing legacy values fall back to `exam`.
 - `symbol` is required.
 - If `followed_checklist` is true, the trade requires:
   - entry reason
   - stop loss
   - R risk
 - The first followed-strategy trade of the day awards +40 EXP.
+- `fundedDailyPnl` is derived from today's `funded` trades by summing their optional `pnl` values.
+- Funded account protection activates when `fundedDailyPnl < 0`.
+- After the funded account first enters a daily loss state, only one later funded followed-strategy trade can remain eligible for the followed-strategy reward. Once that post-loss funded trade exists, new funded followed-strategy records are still saved, still spend Energy through the normal trade path, but do not award EXP, do not increase execution, and do not complete `strategy_trade`.
 - Editing a trade appends field-level edit history.
 
 Notes:

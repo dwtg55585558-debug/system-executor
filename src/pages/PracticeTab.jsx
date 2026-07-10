@@ -13,11 +13,42 @@ import {
 } from "../utils/constants.js";
 import { uid, detectRiskConditions } from "../utils/helpers.js";
 
+const ACCOUNT_TYPE_LABEL = {
+  exam: "考試帳戶",
+  funded: "出金帳戶",
+};
+
+const getAccountType = (trade) => (trade.accountType === "funded" ? "funded" : "exam");
+
+const getFundedProtectionState = (trades) => {
+  const fundedTrades = trades
+    .filter((trade) => getAccountType(trade) === "funded")
+    .sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  let cumulative = 0;
+  let enteredLoss = false;
+  let afterLossCount = 0;
+
+  fundedTrades.forEach((trade) => {
+    if (enteredLoss) afterLossCount += 1;
+    cumulative += trade.pnl == null ? 0 : Number(trade.pnl) || 0;
+    if (!enteredLoss && cumulative < 0) enteredLoss = true;
+  });
+
+  const active = cumulative < 0;
+  return {
+    fundedDailyPnl: cumulative,
+    active,
+    afterLossCount,
+    locked: active && afterLossCount >= 1,
+  };
+};
+
 export default function PracticeTab({ ctx }) {
   const { day, data, updateDay, addExp, addReward, adjustIntegrity, spendEnergy, showToast, setBossCard } = ctx;
   const latestDayRef = useRef(day);
   latestDayRef.current = day;
   const [editingId, setEditingId] = useState(null);
+  const [accountType, setAccountType] = useState("exam");
   const [symbol, setSymbol] = useState("");
   const [direction, setDirection] = useState("long");
   const [followed, setFollowed] = useState(true);
@@ -30,6 +61,7 @@ export default function PracticeTab({ ctx }) {
   const [riskCheck, setRiskCheck] = useState(null);
   const [calibrationChecks, setCalibrationChecks] = useState({});
   const executionGoal = "只在符合系統時進場";
+  const fundedProtection = getFundedProtectionState(day.trades);
 
   const morningCalibrationItems = [
     { id: "process_goal", label: "今天不以賺錢為目標，只以執行系統為目標" },
@@ -64,6 +96,7 @@ export default function PracticeTab({ ctx }) {
   };
 
   const resetForm = () => {
+    setAccountType("exam");
     setSymbol("");
     setDirection("long");
     setFollowed(true);
@@ -77,6 +110,7 @@ export default function PracticeTab({ ctx }) {
 
   const startEdit = (trade) => {
     setEditingId(trade.id);
+    setAccountType(getAccountType(trade));
     setSymbol(trade.symbol);
     setDirection(trade.direction);
     setFollowed(trade.followed_checklist);
@@ -94,6 +128,7 @@ export default function PracticeTab({ ctx }) {
 
   const buildTrade = () => ({
     id: editingId || uid(),
+    accountType,
     symbol,
     direction,
     followed_checklist: followed,
@@ -106,9 +141,14 @@ export default function PracticeTab({ ctx }) {
   });
 
   const diffTrade = (oldT, newT) => {
-    const fields = ["symbol", "direction", "followed_checklist", "stop_loss_set", "entry_reason", "r_value", "notes", "pnl"];
+    const fields = ["accountType", "symbol", "direction", "followed_checklist", "stop_loss_set", "entry_reason", "r_value", "notes", "pnl"];
     const now = Date.now();
     return fields.filter((f) => oldT[f] !== newT[f]).map((f) => ({ field: f, old_value: oldT[f], new_value: newT[f], edited_at: now }));
+  };
+
+  const blocksFundedStrategyReward = (tradeData, latestDay) => {
+    const protection = getFundedProtectionState(latestDay.trades);
+    return getAccountType(tradeData) === "funded" && tradeData.followed_checklist && protection.locked;
   };
 
   const commitTrade = (tradeData) => {
@@ -127,6 +167,8 @@ export default function PracticeTab({ ctx }) {
         return;
       }
 
+      const blockedByFundedProtection = shouldAwardFollowed && blocksFundedStrategyReward(tradeData, latestDay);
+
       const changes = diffTrade(old, tradeData);
       const finalTrade = {
         ...tradeData,
@@ -135,8 +177,10 @@ export default function PracticeTab({ ctx }) {
       };
       const newTrades = [...latestDay.trades];
       newTrades[idx] = finalTrade;
-      updateDay((d) => ({ ...d, trades: newTrades, strategy_trade: d.strategy_trade || tradeData.followed_checklist }));
-      if (shouldAwardFollowed) {
+      updateDay((d) => ({ ...d, trades: newTrades, strategy_trade: d.strategy_trade || (shouldAwardFollowed && !blockedByFundedProtection) }));
+      if (blockedByFundedProtection) {
+        showToast("出金帳戶保護中｜今日不再獎勵新增交易", "info");
+      } else if (shouldAwardFollowed) {
         addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
         showToast("符合策略交易｜EXP +40｜執行 +1", "reward");
       } else {
@@ -151,9 +195,13 @@ export default function PracticeTab({ ctx }) {
         return;
       }
 
-      updateDay((d) => ({ ...d, trades: [...d.trades, tradeData], strategy_trade: d.strategy_trade || tradeData.followed_checklist }));
+      const blockedByFundedProtection = shouldAwardFollowed && blocksFundedStrategyReward(tradeData, latestDay);
+
+      updateDay((d) => ({ ...d, trades: [...d.trades, tradeData], strategy_trade: d.strategy_trade || (shouldAwardFollowed && !blockedByFundedProtection) }));
       spendEnergy(10);
-      if (shouldAwardFollowed) {
+      if (blockedByFundedProtection) {
+        showToast("出金帳戶保護中｜今日不再獎勵新增交易", "info");
+      } else if (shouldAwardFollowed) {
         addReward({ exp: 40, label: "符合策略進場", statKey: "execution" });
         showToast("符合策略交易｜EXP +40｜執行 +1", "reward");
       } else {
@@ -187,8 +235,13 @@ export default function PracticeTab({ ctx }) {
     const trade = buildTrade();
     if (!editingId) {
       const reasons = detectRiskConditions(day, data.history);
-      if (reasons.length > 0) {
-        setRiskCheck({ trade, reasons });
+      const needsFundedProtectionConfirm =
+        getAccountType(trade) === "funded" &&
+        trade.followed_checklist &&
+        fundedProtection.active &&
+        !fundedProtection.locked;
+      if (reasons.length > 0 || needsFundedProtectionConfirm) {
+        setRiskCheck({ trade, reasons, fundedProtectionConfirm: needsFundedProtectionConfirm });
         return;
       }
     }
@@ -324,6 +377,36 @@ export default function PracticeTab({ ctx }) {
 
       <SectionLabel>{editingId ? "編輯交易" : "記錄交易"}</SectionLabel>
       <Card>
+        {fundedProtection.active && (
+          <div className="rounded-lg p-3 mb-3" style={{ background: "rgba(116,43,43,0.16)", border: "1px solid rgba(203,120,72,0.42)" }}>
+            <div style={{ fontSize: 12, color: "#d6a15f", fontWeight: 800, marginBottom: 5 }}>
+              出金帳戶保護中
+            </div>
+            <div style={{ fontSize: 12.5, color: C.textDim, lineHeight: 1.55 }}>
+              你今天的出金帳戶已進入虧損狀態，下一筆交易需要額外確認。
+            </div>
+            <div style={{ fontSize: 11.5, color: C.textFaint, lineHeight: 1.5, marginTop: 5 }}>
+              目標不是把今天轉正，而是避免虧損後追單。
+            </div>
+          </div>
+        )}
+        <div className="flex gap-2 mb-2">
+          {["exam", "funded"].map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => setAccountType(type)}
+              className="flex-1 rounded-lg py-1.5 text-xs"
+              style={{
+                background: accountType === type ? C.raised2 : C.raised,
+                border: `1px solid ${accountType === type ? C.gold : C.hair}`,
+                color: accountType === type ? C.text : C.textFaint,
+              }}
+            >
+              {ACCOUNT_TYPE_LABEL[type]}
+            </button>
+          ))}
+        </div>
         <input
           value={symbol}
           onChange={(e) => setSymbol(e.target.value)}
@@ -441,6 +524,9 @@ export default function PracticeTab({ ctx }) {
                   </button>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
+                  <span style={{ fontSize: 11, color: getAccountType(t) === "funded" ? "#d6a15f" : C.textFaint }}>
+                    {ACCOUNT_TYPE_LABEL[getAccountType(t)]}
+                  </span>
                   <span style={{ fontSize: 11, color: t.followed_checklist ? C.sage : C.textFaint }}>
                     {t.followed_checklist ? "符合策略" : "未標記符合"}
                   </span>

@@ -83,6 +83,7 @@ state
       checklist_pass
       checklistChecks
       trades
+        accountType
       stopLossMode
       successful_wait
       violations
@@ -160,6 +161,7 @@ Practice is the largest feature module. It owns:
 - new trade energy spending
 - trade edit history diffing
 - system validation for followed-strategy trades
+- funded account protection state derived from today's funded trades
 - decision risk monitor trigger
 - risk check response logging
 - successful wait logging
@@ -168,6 +170,8 @@ Practice is the largest feature module. It owns:
 - evening reflection for no-trade days
 
 This page mixes view layout, form state, validation, reward logic, penalty logic, edit-history generation, and risk flow orchestration.
+
+Funded account protection is automatic and local to `PracticeTab`. Each trade stores `accountType` as `exam` or `funded`; missing legacy values are treated as `exam`. The page derives `fundedDailyPnl` by summing today's funded trade `pnl` values. When `fundedDailyPnl < 0`, the UI shows the funded protection card. After the funded account first enters a daily loss state, one later funded followed-strategy trade can still be a reward candidate; once that later funded trade exists, additional funded followed-strategy records are saved and spend Energy normally but do not call `addReward`, do not increase execution, and do not set `strategy_trade`. Manual `stopLossMode` remains the higher-priority restriction.
 
 ### `JournalTab`
 

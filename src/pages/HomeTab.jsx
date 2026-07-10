@@ -3,11 +3,10 @@ import {
   AlertTriangle,
   BookOpen,
   Check,
-  CircleDot,
+  ChevronDown,
   Dumbbell,
   Pencil,
   ScrollText,
-  Target,
 } from "lucide-react";
 import Card from "../components/Card.jsx";
 import CultivatorNameModal from "../components/CultivatorNameModal.jsx";
@@ -31,43 +30,40 @@ export default function HomeTab({ ctx }) {
     resetAllData,
   } = ctx;
   const [editingName, setEditingName] = useState(false);
+  const [showAttributes, setShowAttributes] = useState(false);
+  const [showDataManagement, setShowDataManagement] = useState(false);
   const quote = QUOTES[new Date().getDate() % QUOTES.length];
 
-  const manualTasks = [
-    { id: "morning_plan", label: "晨間校準", exp: 10, statKey: "focus" },
-    { id: "workout", label: "健身", exp: 20, statKey: "mindset" },
-    { id: "reading", label: "閱讀", exp: 20, statKey: "insight" },
-  ];
-
-  const followedToday = day.strategy_trade === true;
   const stopLossMode = !!day.stopLossMode;
   const gapDays = journalGapDays(data.history);
-
-  const checklistRows = [
-    ...manualTasks.map((t) => ({
-      key: t.id,
-      label: t.label,
-      exp: t.exp,
-      statKey: t.statKey,
-      done: day[t.id],
-      manual: true,
-    })),
-    { key: "checklist_pass", label: "交易前 Checklist", exp: 20, done: day.checklist_pass, manual: false },
-    {
-      key: "followed",
-      label: "符合策略交易",
-      exp: null,
-      done: followedToday,
-      manual: false,
-      note: stopLossMode ? "止血模式：此模式下新增交易不完成品質標記" : "品質標記｜完成今日系統執行",
-    },
-    { key: "wait", label: "沒有機會、成功等待", exp: 50, done: day.successful_wait, manual: false },
-    { key: "stoploss", label: "完整停損", exp: null, done: day.trades.some((t) => t.stop_loss_set), manual: false },
-    { key: "journal", label: "完成 Decision Journal", exp: 20, done: !!day.journal, manual: false },
+  const tradeTrainingDone = !!(day.strategy_trade || day.successful_wait);
+  const coreStages = [
+    { key: "morning", label: "晨間校準", done: !!day.morning_plan },
+    { key: "checklist", label: "交易前準備", done: !!day.checklist_pass },
+    { key: "training", label: "交易修煉", done: tradeTrainingDone },
+    { key: "journal", label: "今日復盤", done: !!day.journal },
   ];
+  const completedCoreCount = coreStages.filter((stage) => stage.done).length;
+  const coreProgress = (completedCoreCount / coreStages.length) * 100;
+  const nextIncompleteIndex = coreStages.findIndex((stage) => !stage.done);
 
-  const completedQuestCount = checklistRows.filter((row) => row.done).length;
-  const questPct = Math.round((completedQuestCount / checklistRows.length) * 100);
+  let nextAction;
+  if (!day.morning_plan) {
+    nextAction = { title: "開始晨間校準", description: "先設定今日交易邊界。", tab: "practice" };
+  } else if (!day.checklist_pass) {
+    nextAction = { title: "完成交易前 Checklist", description: "確認條件後再進入交易。", tab: "practice" };
+  } else if (!tradeTrainingDone) {
+    nextAction = {
+      title: "完成今日交易修煉",
+      description: "記錄符合策略交易，或在沒有機會時完成成功等待。",
+      tab: "practice",
+    };
+  } else if (!day.journal) {
+    nextAction = { title: "完成今日復盤", description: "用 Decision Journal 結束今日修煉。", tab: "journal" };
+  } else {
+    nextAction = { title: "今日修煉已完成", description: "今天的交易修煉閉環已完成。", complete: true };
+  }
+
   const expPct = lvl.expToNext ? Math.round((lvl.expInto / lvl.expToNext) * 100) : 100;
   const rankTitle = titleForLevel(lvl.level);
   const cultivatorName = data.identity.name?.trim() || "執行者";
@@ -86,25 +82,10 @@ export default function HomeTab({ ctx }) {
   const energyPercent = Math.max(0, Math.min(100, (energy / maxEnergy) * 100));
   const energyState =
     energy > 0
-      ? {
-          label: "穩定",
-          color: "#6B9A7E",
-          dim: "#3E5A49",
-          glow: "rgba(107,154,126,0.18)",
-        }
+      ? { label: "穩定", color: "#6B9A7E", dim: "#3E5A49" }
       : energy === 0
-        ? {
-            label: "今日額度已用完",
-            color: "#D19A42",
-            dim: "#6B4E27",
-            glow: "rgba(209,154,66,0.18)",
-          }
-        : {
-            label: "過度交易",
-            color: "#B9574F",
-            dim: "#653735",
-            glow: "rgba(185,87,79,0.18)",
-          };
+        ? { label: "今日額度已用完", color: "#D19A42", dim: "#6B4E27" }
+        : { label: "過度交易", color: "#B9574F", dim: "#653735" };
 
   const toggleManual = (id, exp, label, statKey) => {
     if (day[id]) return;
@@ -139,12 +120,11 @@ export default function HomeTab({ ctx }) {
     resetAllData();
   };
 
-  const questIcon = (row) => {
-    if (row.key === "workout") return <Dumbbell size={17} />;
-    if (row.key === "reading") return <BookOpen size={17} />;
-    if (row.key === "journal") return <ScrollText size={17} />;
-    if (row.key === "followed" || row.key === "checklist_pass") return <Target size={17} />;
-    return <CircleDot size={17} />;
+  const sectionTitleStyle = {
+    fontFamily: FONT_DISPLAY,
+    fontSize: 17,
+    color: C.text,
+    letterSpacing: 0.5,
   };
 
   return (
@@ -155,79 +135,41 @@ export default function HomeTab({ ctx }) {
           overflow: "hidden",
           borderColor: C.goldDim,
           background:
-            "radial-gradient(circle at 18% 4%, rgba(203,163,95,0.22), transparent 32%), linear-gradient(145deg, rgba(7,8,11,0.99), rgba(15,16,21,0.98) 55%, rgba(25,22,17,0.98))",
-          boxShadow: "0 22px 46px rgba(0,0,0,0.42), inset 0 1px 0 rgba(203,163,95,0.16)",
-          padding: 16,
+            "radial-gradient(circle at 18% 4%, rgba(203,163,95,0.2), transparent 30%), linear-gradient(145deg, rgba(7,8,11,0.99), rgba(15,16,21,0.98) 58%, rgba(25,22,17,0.98))",
+          boxShadow: "0 18px 38px rgba(0,0,0,0.4), inset 0 1px 0 rgba(203,163,95,0.16)",
+          padding: 14,
         }}
       >
-        <div className="flex items-start justify-end gap-3">
-          <div
-            style={{
-              color: C.gold,
-              fontFamily: FONT_MONO,
-              fontSize: 11,
-              letterSpacing: 1,
-              border: `1px solid rgba(203,163,95,0.34)`,
-              borderRadius: 999,
-              padding: "4px 8px",
-              background: "rgba(203,163,95,0.06)",
-            }}
-          >
-            {ctx.today}
+        <div className="flex items-center justify-between gap-3">
+          <div style={{ color: C.gold, fontFamily: FONT_DISPLAY, fontSize: 28, lineHeight: 1 }}>
+            Lv.{lvl.level}
+          </div>
+          <div className="text-right">
+            <div style={{ color: C.gold, fontSize: 12, fontWeight: 700 }}>{rankTitle}</div>
+            <div style={{ color: C.textFaint, fontFamily: FONT_MONO, fontSize: 10, marginTop: 2 }}>{ctx.today}</div>
           </div>
         </div>
 
-        <div className="mt-4 flex items-center gap-4">
+        <div className="mt-3 flex items-center gap-3">
           <div
             className="shrink-0 flex items-center justify-center"
             style={{
-              width: 120,
-              height: 120,
+              width: 92,
+              height: 92,
               borderRadius: "50%",
-              border: `1px solid rgba(203,163,95,0.36)`,
-              background:
-                "radial-gradient(circle at 50% 42%, rgba(203,163,95,0.3), rgba(10,11,14,0.92) 56%, rgba(4,5,7,1))",
-              boxShadow: "inset 0 0 28px rgba(0,0,0,0.48), 0 0 28px rgba(203,163,95,0.08)",
+              border: "1px solid rgba(203,163,95,0.36)",
+              background: "radial-gradient(circle at 50% 42%, rgba(203,163,95,0.3), rgba(10,11,14,0.92) 56%, #040507)",
               overflow: "hidden",
             }}
           >
-            <img
-              src={executorApprentice}
-              alt="System Executor apprentice character"
-              style={{
-                width: "100%",
-                maxWidth: 130,
-                height: "auto",
-                objectFit: "contain",
-              }}
-            />
+            <img src={executorApprentice} alt="修煉者角色" style={{ width: "100%", height: "auto", objectFit: "contain" }} />
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2 min-w-0">
-              <div style={{ fontFamily: FONT_DISPLAY, fontSize: 34, color: C.text, lineHeight: 1, minWidth: 0, flexShrink: 1 }}>
-                Lv.{lvl.level}
-              </div>
-              <div style={{ textAlign: "right", minWidth: 0, flexShrink: 0 }}>
-                <div style={{ color: C.gold, fontSize: 12, fontWeight: 700 }}>{rankTitle}</div>
-                <div style={{ color: C.textFaint, fontSize: 10, marginTop: 1 }}>System Executor</div>
-              </div>
-            </div>
-
-            <div className="mt-3 flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
               <div className="min-w-0 flex-1">
                 <div style={{ color: C.textFaint, fontFamily: FONT_MONO, fontSize: 10 }}>修煉者名稱</div>
-                <div
-                  style={{
-                    color: C.text,
-                    fontFamily: FONT_DISPLAY,
-                    fontSize: 19,
-                    lineHeight: 1.2,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
+                <div style={{ color: C.text, fontFamily: FONT_DISPLAY, fontSize: 19, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {cultivatorName}
                 </div>
               </div>
@@ -235,107 +177,40 @@ export default function HomeTab({ ctx }) {
                 type="button"
                 onClick={() => setEditingName(true)}
                 aria-label="更改名稱"
-                title="更改名稱"
                 className="shrink-0 flex items-center justify-center"
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: "50%",
-                  border: `1px solid rgba(203,163,95,0.26)`,
-                  background: "rgba(203,163,95,0.08)",
-                  color: C.gold,
-                }}
+                style={{ width: 30, height: 30, borderRadius: "50%", border: "1px solid rgba(203,163,95,0.26)", background: "rgba(203,163,95,0.08)", color: C.gold }}
               >
-                <Pencil size={15} />
+                <Pencil size={14} />
               </button>
             </div>
 
-            <div
-              style={{
-                height: 8,
-                background: "rgba(42,44,54,0.86)",
-                borderRadius: 999,
-                marginTop: 12,
-                overflow: "hidden",
-                border: `1px solid rgba(203,163,95,0.12)`,
-              }}
-            >
-              <div
-                style={{
-                  width: `${expPct}%`,
-                  height: "100%",
-                  background: `linear-gradient(90deg, ${C.goldDim}, ${C.gold})`,
-                }}
-              />
+            <div className="mt-3 h-2 overflow-hidden rounded-full" style={{ background: "rgba(42,44,54,0.86)" }}>
+              <div style={{ width: `${expPct}%`, height: "100%", background: `linear-gradient(90deg, ${C.goldDim}, ${C.gold})` }} />
             </div>
-
-            <div className="flex justify-between mt-2" style={{ fontFamily: FONT_MONO, fontSize: 11 }}>
-              <span style={{ color: C.textFaint }}>EXP</span>
-              <span style={{ color: C.textDim }}>
-                {lvl.expToNext ? `${lvl.expInto} / ${lvl.expToNext} XP` : "MAX"}
-              </span>
+            <div className="mt-1.5 flex justify-between gap-2" style={{ fontFamily: FONT_MONO, fontSize: 10 }}>
+              <span style={{ color: C.gold }}>{lvl.expToNext ? `${lvl.expInto} / ${lvl.expToNext} EXP` : "MAX EXP"}</span>
+              <span style={{ color: C.textFaint }}>{lvl.expToNext ? `還差 ${Math.max(0, lvl.expToNext - lvl.expInto)} EXP` : "已達最高等級"}</span>
             </div>
           </div>
         </div>
+      </Card>
 
-        <div
-          className="mt-4"
-          style={{
-            border: `1px solid rgba(203,163,95,0.18)`,
-            background: "rgba(7,8,11,0.62)",
-            borderRadius: 13,
-            padding: 12,
-            boxShadow: "inset 0 1px 0 rgba(203,163,95,0.08)",
-          }}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div style={{ color: C.gold, fontFamily: FONT_DISPLAY, fontSize: 14, letterSpacing: 0.5 }}>
-              六角屬性
-            </div>
-            <div style={{ color: C.textFaint, fontFamily: FONT_MONO, fontSize: 10 }}>
-              CORE STATS
-            </div>
+      <Card className="mt-3" style={{ borderColor: nextAction.complete ? C.sage : C.goldDim, background: "linear-gradient(135deg, rgba(19,20,25,0.96), rgba(27,29,36,0.78))" }}>
+        <div style={{ color: C.textFaint, fontFamily: FONT_MONO, fontSize: 10, letterSpacing: 1 }}>下一步行動</div>
+        <div className="mt-2 flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <div style={{ color: nextAction.complete ? C.sage : C.text, fontFamily: FONT_DISPLAY, fontSize: 18 }}>{nextAction.title}</div>
+            <div style={{ color: C.textDim, fontSize: 12.5, lineHeight: 1.5, marginTop: 4 }}>{nextAction.description}</div>
           </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            {hexAttributes.map((stat) => (
-              <div
-                key={stat.key}
-                className="flex items-center justify-between gap-2"
-                style={{
-                  minHeight: 38,
-                  border: `1px solid rgba(42,44,54,0.9)`,
-                  background: "linear-gradient(180deg, rgba(19,20,25,0.9), rgba(10,11,14,0.86))",
-                  borderRadius: 10,
-                  padding: "8px 10px",
-                }}
-              >
-                <span style={{ color: C.textDim, fontSize: 12, fontWeight: 700 }}>
-                  {stat.label}
-                </span>
-                <span style={{ color: C.gold, fontFamily: FONT_MONO, fontSize: 13 }}>
-                  {stat.value}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div
-          className="mt-4"
-          style={{
-            border: `1px solid rgba(203,163,95,0.16)`,
-            background: "rgba(10,11,14,0.58)",
-            borderRadius: 13,
-            padding: "12px 13px",
-            textAlign: "center",
-            color: C.textDim,
-            fontFamily: FONT_DISPLAY,
-            fontSize: 15,
-            letterSpacing: 0.5,
-          }}
-        >
-          「紀律，是自由之門。」
+          {nextAction.complete ? (
+            <div className="shrink-0 flex items-center gap-1.5" style={{ color: C.sage, fontSize: 12, fontWeight: 700 }}>
+              <Check size={16} /> 完成
+            </div>
+          ) : (
+            <button type="button" onClick={() => setTab(nextAction.tab)} className="shrink-0 rounded-lg px-4 py-2 text-sm font-medium" style={{ background: C.goldDim, color: C.text }}>
+              前往
+            </button>
+          )}
         </div>
       </Card>
 
@@ -343,267 +218,115 @@ export default function HomeTab({ ctx }) {
         <Card className="mt-3" style={{ borderColor: C.ashDim, background: "rgba(90,54,52,0.22)" }}>
           <div className="flex items-start gap-2">
             <AlertTriangle size={15} color={C.ash} className="mt-0.5 shrink-0" />
-            <div style={{ fontSize: 12.5, color: C.text, lineHeight: 1.5 }}>
-              你已經 {gapDays} 天沒有誠實面對自己了。今天要不要花 60 秒完成 Journal?
+            <div className="min-w-0 flex-1" style={{ fontSize: 12.5, color: C.text, lineHeight: 1.5 }}>
+              已有 {gapDays} 天未完成 Decision Journal。<br />用 60 秒補上今天的復盤。
             </div>
+            <button type="button" onClick={() => setTab("journal")} className="shrink-0 rounded-lg px-3 py-2 text-xs font-medium" style={{ border: `1px solid ${C.goldDim}`, color: C.gold, background: "rgba(203,163,95,0.06)" }}>
+              前往日誌
+            </button>
           </div>
         </Card>
       )}
 
-      {stopLossMode && (
-        <Card
-          className="mt-3"
-          style={{
-            borderColor: "rgba(185,87,79,0.72)",
-            background:
-              "linear-gradient(135deg, rgba(90,54,52,0.34), rgba(27,29,36,0.82)), radial-gradient(circle at 12% 0%, rgba(209,154,66,0.16), transparent 34%)",
-            boxShadow: "inset 0 1px 0 rgba(209,154,66,0.08)",
-          }}
-        >
-          <div className="flex items-start gap-3">
-            <AlertTriangle size={18} color={C.ash} className="mt-0.5 shrink-0" />
-            <div className="min-w-0">
-              <div style={{ color: C.ash, fontFamily: FONT_DISPLAY, fontSize: 17, letterSpacing: 0.5 }}>
-                止血模式
-              </div>
-              <div style={{ color: C.text, fontSize: 13.5, lineHeight: 1.55, marginTop: 5 }}>
-                今天不再修煉進攻，只修煉停止。
-              </div>
-              <div style={{ color: C.textDim, fontSize: 12, lineHeight: 1.55, marginTop: 8 }}>
-                允許：復盤、日誌、閱讀、健身
-              </div>
-              <div style={{ color: C.textDim, fontSize: 12, lineHeight: 1.55 }}>
-                暫停：交易紀錄獎勵、符合策略品質標記、追單、補回虧損
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      <div
-        className="mt-5 mb-2"
-        style={{ fontFamily: FONT_DISPLAY, fontSize: 17, color: C.text, letterSpacing: 0.5 }}
-      >
-        今日任務
+      <div className="mt-5 mb-2 flex items-end justify-between gap-3">
+        <div style={sectionTitleStyle}>今日修煉</div>
+        <div style={{ color: C.gold, fontFamily: FONT_MONO, fontSize: 12 }}>{completedCoreCount} / 4</div>
       </div>
-
       <Card style={{ borderColor: C.hair, background: "linear-gradient(180deg, #131419, #101116)", padding: 12 }}>
-        {checklistRows.slice(0, 5).map((row, i) => {
-          const isMorningCalibration = row.key === "morning_plan";
-
+        <div className="mb-2 h-1.5 overflow-hidden rounded-full" style={{ background: "rgba(42,44,54,0.86)" }}>
+          <div className="h-full rounded-full" style={{ width: `${coreProgress}%`, background: C.sage }} />
+        </div>
+        {coreStages.map((stage, index) => {
+          const status = stage.done ? "已完成" : index === nextIncompleteIndex ? "進行中" : "尚未完成";
           return (
-            <div
-              key={row.key}
-              onClick={() => row.manual && !row.done && !isMorningCalibration && toggleManual(row.key, row.exp, row.label, row.statKey)}
-              className="flex items-start justify-between gap-3"
-              style={{
-                borderTop: i === 0 ? "none" : `1px solid rgba(42,44,54,0.78)`,
-                cursor: row.manual && !row.done && !isMorningCalibration ? "pointer" : "default",
-                padding: "12px 0",
-              }}
-            >
-              <div className="flex items-start gap-3 min-w-0">
-                <div
-                  className="flex items-center justify-center shrink-0"
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: "50%",
-                    background: row.done ? "rgba(62,90,73,0.36)" : "rgba(203,163,95,0.08)",
-                    border: `1px solid ${row.done ? C.sage : C.goldDim}`,
-                    color: row.done ? C.sage : C.gold,
-                  }}
-                >
-                  {questIcon(row)}
-                </div>
-                <div className="min-w-0">
-                  <div style={{ color: row.done ? C.textDim : C.text, fontSize: 14, fontWeight: 700 }}>
-                    {row.label}
-                  </div>
-                  <div style={{ color: row.done ? C.sage : C.gold, fontFamily: FONT_MONO, fontSize: 11, marginTop: 3 }}>
-                    {row.exp !== null ? `+${row.exp} EXP` : "SYSTEM RECORD"}
-                  </div>
-                  {row.note && (
-                    <div style={{ color: C.ash, fontSize: 11.5, lineHeight: 1.45, marginTop: 4 }}>
-                      {row.note}
-                    </div>
-                  )}
-                  {isMorningCalibration && !row.done && (
-                    <div className="mt-3" style={{ maxWidth: 430 }}>
-                      <div style={{ color: C.textDim, fontSize: 12.5, lineHeight: 1.5 }}>
-                        尚未完成晨間校準
-                      </div>
-                      <div style={{ color: C.textFaint, fontSize: 12, lineHeight: 1.5, marginTop: 2 }}>
-                        請先到修煉頁完成今日交易邊界設定
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setTab("practice")}
-                        className="mt-3 rounded-lg px-4 py-2 text-sm font-medium"
-                        style={{ background: C.goldDim, color: C.text }}
-                      >
-                        前往修煉
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div
-                className="flex items-center justify-center shrink-0"
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: "50%",
-                  background: row.done ? "rgba(62,90,73,0.72)" : "rgba(10,11,14,0.4)",
-                  border: `1px solid ${row.done ? C.sage : C.hair}`,
-                  color: row.done ? C.text : C.textFaint,
-                  fontFamily: FONT_MONO,
-                  fontSize: 12,
-                }}
-              >
-                {row.done ? <Check size={18} strokeWidth={3} /> : row.manual ? "" : "0/1"}
+            <div key={stage.key} className="flex items-center justify-between gap-3" style={{ borderTop: index === 0 ? "none" : `1px solid ${C.hair}`, padding: "11px 2px" }}>
+              <div style={{ color: stage.done ? C.textDim : C.text, fontSize: 13.5, fontWeight: 700 }}>{stage.label}</div>
+              <div className="flex items-center gap-2" style={{ color: stage.done ? C.sage : C.textFaint, fontSize: 11.5 }}>
+                {status}
+                <span className="flex items-center justify-center" style={{ width: 22, height: 22, borderRadius: "50%", border: `1px solid ${stage.done ? C.sage : C.hair}`, background: stage.done ? "rgba(62,90,73,0.45)" : "transparent" }}>
+                  {stage.done && <Check size={13} strokeWidth={3} />}
+                </span>
               </div>
             </div>
           );
         })}
       </Card>
 
-      <div
-        className="mt-5 mb-2"
-        style={{ fontFamily: FONT_DISPLAY, fontSize: 17, color: C.text, letterSpacing: 0.5 }}
-      >
-        今日狀態
-      </div>
-
-      <div className="grid grid-cols-1 gap-3">
-        <Card style={{ borderColor: C.hair, background: "rgba(19,20,25,0.86)" }}>
-          <div className="flex items-center gap-3">
-            <div
-              className="flex items-center justify-center shrink-0"
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: "50%",
-                background: energyState.glow,
-                border: `1px solid ${energyState.dim}`,
-                color: energyState.color,
-              }}
-            >
-              <Target size={19} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <div style={{ color: C.textFaint, fontSize: 11, fontFamily: FONT_MONO }}>Energy</div>
-                <div style={{ color: energyState.color, fontSize: 10, fontWeight: 800 }}>
-                  {energyState.label}
-                </div>
-              </div>
-              <div style={{ color: energyState.color, fontFamily: FONT_DISPLAY, fontSize: 25, marginTop: 2 }}>
-                {energy}
-                <span style={{ color: C.textFaint, fontSize: 13 }}> /{maxEnergy}</span>
-              </div>
-              <div
-                className="mt-2 h-1.5 rounded-full overflow-hidden"
-                style={{ background: "rgba(42,44,54,0.86)" }}
-              >
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${energyPercent}%`,
-                    background: `linear-gradient(90deg, ${energyState.dim}, ${energyState.color})`,
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {!stopLossMode && (
-        <Card
-          className="mt-3"
-          style={{
-            borderColor: "rgba(185,87,79,0.42)",
-            background: "linear-gradient(135deg, rgba(90,54,52,0.18), rgba(19,20,25,0.9))",
-            padding: 12,
-          }}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div style={{ color: C.textDim, fontSize: 12.5, lineHeight: 1.45 }}>
-                情緒交易、追單或害怕失去帳號時，切換為停止與復盤。
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={enterStopLossMode}
-              className="shrink-0 rounded-lg px-3 py-2 text-xs font-medium"
-              style={{
-                background: "rgba(90,54,52,0.42)",
-                border: `1px solid rgba(185,87,79,0.56)`,
-                color: C.text,
-              }}
-            >
-              進入止血模式
+      <div className="mt-5 mb-2" style={sectionTitleStyle}>附加修煉</div>
+      <Card style={{ borderColor: C.hair, background: "rgba(19,20,25,0.86)", padding: 12 }}>
+        {[
+          { id: "workout", label: "健身", exp: 20, statKey: "mindset", icon: Dumbbell },
+          { id: "reading", label: "閱讀", exp: 20, statKey: "insight", icon: BookOpen },
+        ].map((task, index) => {
+          const Icon = task.icon;
+          const done = !!day[task.id];
+          return (
+            <button key={task.id} type="button" disabled={done} onClick={() => toggleManual(task.id, task.exp, task.label, task.statKey)} className="flex w-full items-center justify-between gap-3 text-left" style={{ borderTop: index === 0 ? "none" : `1px solid ${C.hair}`, padding: "12px 2px", cursor: done ? "default" : "pointer" }}>
+              <span className="flex items-center gap-3" style={{ color: done ? C.textDim : C.text, fontSize: 13.5, fontWeight: 700 }}><Icon size={16} color={done ? C.sage : C.textDim} />{task.label}</span>
+              <span className="flex items-center gap-1.5" style={{ color: done ? C.sage : C.textFaint, fontSize: 11.5 }}>{done ? "已完成" : "點擊完成"}{done && <Check size={14} />}</span>
             </button>
-          </div>
-        </Card>
-      )}
-
-      <Card
-        className="mt-3"
-        style={{
-          borderColor: C.goldDim,
-          background: "linear-gradient(135deg, rgba(19,20,25,0.96), rgba(27,29,36,0.72))",
-          padding: 13,
-        }}
-      >
-        <div className="flex items-start gap-2">
-          <ScrollText size={15} color={C.gold} className="mt-0.5 shrink-0" />
-          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13.5, color: C.textDim, lineHeight: 1.5 }}>
-            {quote}
-          </div>
-        </div>
+          );
+        })}
       </Card>
 
-      <div className="mt-5 mb-1 flex justify-center gap-2">
-        <button
-          type="button"
-          onClick={confirmResetToday}
-          className="rounded-lg px-3 py-2 text-xs"
-          style={{
-            background: "transparent",
-            border: `1px solid rgba(126,130,142,0.28)`,
-            color: C.textFaint,
-          }}
-        >
-          重置今日
+      <div className="mt-5 mb-2" style={sectionTitleStyle}>今日交易資源</div>
+      <Card style={{ borderColor: stopLossMode ? "rgba(185,87,79,0.72)" : C.hair, background: stopLossMode ? "linear-gradient(135deg, rgba(90,54,52,0.3), rgba(19,20,25,0.9))" : "rgba(19,20,25,0.86)" }}>
+        <div className="flex items-center justify-between gap-3">
+          <div style={{ color: stopLossMode ? "#B9574F" : C.text, fontFamily: FONT_DISPLAY, fontSize: 17 }}>{stopLossMode ? "止血模式中" : "今日交易資源"}</div>
+          <div style={{ color: energyState.color, fontSize: 11, fontWeight: 800 }}>{energyState.label}</div>
+        </div>
+        <div className="mt-3 flex items-end justify-between gap-3">
+          <div style={{ color: energyState.color, fontFamily: FONT_DISPLAY, fontSize: 24 }}>Energy {energy} <span style={{ color: C.textFaint, fontSize: 13 }}>/ {maxEnergy}</span></div>
+          <div style={{ color: C.textDim, fontSize: 12 }}>今日交易筆數：{day.trades.length}</div>
+        </div>
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full" style={{ background: "rgba(42,44,54,0.86)" }}>
+          <div className="h-full rounded-full" style={{ width: `${energyPercent}%`, background: `linear-gradient(90deg, ${energyState.dim}, ${energyState.color})` }} />
+        </div>
+        <div style={{ color: C.textFaint, fontSize: 11.5, lineHeight: 1.5, marginTop: 8 }}>
+          {stopLossMode ? "交易仍可紀錄，但今日不再獲得交易紀錄獎勵。" : "每筆交易消耗 10"}
+        </div>
+        {!stopLossMode && (
+          <button type="button" onClick={enterStopLossMode} className="mt-3 rounded-lg px-3 py-2 text-xs font-medium" style={{ background: "rgba(90,54,52,0.42)", border: "1px solid rgba(185,87,79,0.56)", color: C.text }}>
+            進入止血模式
+          </button>
+        )}
+      </Card>
+
+      <Card className="mt-3" style={{ borderColor: C.hair, background: "rgba(19,20,25,0.72)", padding: 12 }}>
+        <button type="button" onClick={() => setShowAttributes((value) => !value)} aria-expanded={showAttributes} className="flex w-full items-center justify-between gap-3 text-left">
+          <span><span style={{ color: C.text, fontFamily: FONT_DISPLAY, fontSize: 16 }}>角色能力</span><span style={{ color: C.textFaint, fontSize: 11.5, marginLeft: 10 }}>專注、紀律、心態、執行、觀察、洞察</span></span>
+          <ChevronDown size={16} color={C.textDim} style={{ transform: showAttributes ? "rotate(180deg)" : "none", transition: "transform 160ms ease" }} />
         </button>
-        <button
-          type="button"
-          onClick={confirmResetAll}
-          className="rounded-lg px-3 py-2 text-xs"
-          style={{
-            background: "transparent",
-            border: `1px solid rgba(90,54,52,0.38)`,
-            color: C.textFaint,
-          }}
-        >
-          重置整個角色
+        {showAttributes && (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {hexAttributes.map((stat) => (
+              <div key={stat.key} className="flex items-center justify-between gap-2" style={{ border: `1px solid ${C.hair}`, background: "rgba(10,11,14,0.7)", borderRadius: 9, padding: "8px 10px" }}>
+                <span style={{ color: C.textDim, fontSize: 12, fontWeight: 700 }}>{stat.label}</span>
+                <span style={{ color: C.gold, fontFamily: FONT_MONO, fontSize: 13 }}>{stat.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <Card className="mt-3" style={{ borderColor: C.goldDim, background: "linear-gradient(135deg, rgba(19,20,25,0.96), rgba(27,29,36,0.72))", padding: 12 }}>
+        <div className="flex items-start gap-2"><ScrollText size={14} color={C.gold} className="mt-0.5 shrink-0" /><div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, color: C.textDim, lineHeight: 1.5 }}>{quote}</div></div>
+      </Card>
+
+      <div className="mt-5 flex flex-col items-center gap-2">
+        <button type="button" onClick={() => setShowDataManagement((value) => !value)} aria-expanded={showDataManagement} className="rounded-lg px-3 py-2 text-xs" style={{ background: "transparent", border: "1px solid rgba(126,130,142,0.22)", color: C.textFaint }}>
+          資料管理
         </button>
+        {showDataManagement && (
+          <div className="flex justify-center gap-2">
+            <button type="button" onClick={confirmResetToday} className="rounded-lg px-3 py-2 text-xs" style={{ background: "transparent", border: "1px solid rgba(126,130,142,0.28)", color: C.textFaint }}>重置今日</button>
+            <button type="button" onClick={confirmResetAll} className="rounded-lg px-3 py-2 text-xs" style={{ background: "transparent", border: "1px solid rgba(90,54,52,0.38)", color: C.textFaint }}>重置整個角色</button>
+          </div>
+        )}
       </div>
 
       {editingName && (
-        <CultivatorNameModal
-          initialName={cultivatorName}
-          onSave={(name) => {
-            updateIdentityName(name);
-            setEditingName(false);
-          }}
-          onCancel={() => setEditingName(false)}
-        />
+        <CultivatorNameModal initialName={cultivatorName} onSave={(name) => { updateIdentityName(name); setEditingName(false); }} onCancel={() => setEditingName(false)} />
       )}
     </div>
   );

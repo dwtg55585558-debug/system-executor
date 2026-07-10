@@ -18,6 +18,16 @@ const ACCOUNT_TYPE_LABEL = {
   funded: "出金帳戶",
 };
 
+const BOSS_DISPLAY_LABEL = {
+  fomo: "害怕錯過",
+  overconfidence: "過度自信",
+  revenge: "報復交易",
+  fear: "恐懼",
+  greed: "貪婪",
+  needtoberight: "想證明自己",
+  impatience: "急躁",
+};
+
 const getAccountType = (trade) => (trade.accountType === "funded" ? "funded" : "exam");
 
 const PROTECTION_ITEMS = [
@@ -111,6 +121,8 @@ export default function PracticeTab({ ctx }) {
     day.morning_plan === true && day.checklist_pass !== true
   );
   const [expandedTradeDetails, setExpandedTradeDetails] = useState({});
+  const [showNoTradeReflection, setShowNoTradeReflection] = useState(false);
+  const [activeExtraTraining, setActiveExtraTraining] = useState(null);
   const executionGoal = "只在符合系統時進場";
   const accountProtection = getAccountProtectionStates(day.trades);
   const activeProtectionTypes = Object.entries(accountProtection).filter(([, state]) => state.active);
@@ -133,6 +145,15 @@ export default function PracticeTab({ ctx }) {
   const checklistRewardClaimed =
     day.claimedRewards?.checklist === true ||
     data.expLog.some((log) => log.date === day.date && log.label === "交易前 Checklist");
+  const hasCompletedChecklistToday = day.checklist_pass === true || checklistRewardClaimed;
+  const showFullPractice = day.morning_plan === true && day.checklist_pass === true;
+  const showExtraTraining =
+    day.morning_plan === true &&
+    (day.checklist_pass === true ||
+      day.trades.length > 0 ||
+      day.successful_wait === true ||
+      day.bossResists.length > 0 ||
+      day.violations.length > 0);
   const currentStep =
     day.morning_plan !== true
       ? "morning"
@@ -141,10 +162,15 @@ export default function PracticeTab({ ctx }) {
         : day.checklist_pass !== true
           ? "checklist"
           : "execute";
-  const stepCardStyle = (step, completed = false) => ({
-    borderColor: currentStep === step ? "rgba(203,163,95,0.72)" : undefined,
-    background: currentStep === step ? "rgba(203,163,95,0.055)" : undefined,
-    opacity: completed && currentStep !== step ? 0.76 : 1,
+  const stepCardStyle = (step, state = "pending") => ({
+    borderColor:
+      currentStep === step
+        ? "rgba(203,163,95,0.72)"
+        : state === "completed"
+          ? "rgba(107,154,126,0.28)"
+          : C.hair,
+    background: currentStep === step ? "rgba(203,163,95,0.055)" : C.surface,
+    opacity: currentStep === step ? 1 : state === "locked" ? 0.56 : state === "completed" ? 0.76 : 1,
   });
   const CurrentStepTag = ({ step }) =>
     currentStep === step ? (
@@ -168,6 +194,8 @@ export default function PracticeTab({ ctx }) {
 
   useEffect(() => {
     setExpandedTradeDetails({});
+    setShowNoTradeReflection(false);
+    setActiveExtraTraining(null);
   }, [day.date]);
 
   useEffect(() => {
@@ -215,7 +243,7 @@ export default function PracticeTab({ ctx }) {
       showToast("交易前準備完成｜本筆執行許可已取得", "info");
     } else {
       addReward({ exp: 20, label: "交易前 Checklist", statKey: "discipline" });
-      showToast("交易前 Checklist 完成｜EXP +20｜紀律 +1", "reward");
+      showToast("交易前準備完成｜EXP +20｜紀律 +1", "reward");
     }
     returnToHomeTop();
   };
@@ -287,7 +315,7 @@ export default function PracticeTab({ ctx }) {
       return;
     }
     if (!day.stopLossMode && day.checklist_pass !== true) {
-      showToast("請先完成交易前 Checklist，取得本筆交易許可", "info");
+      showToast("請先完成交易前準備，取得本筆交易許可", "info");
       setNavigationTarget("pre-trade-checklist");
       return;
     }
@@ -370,7 +398,7 @@ export default function PracticeTab({ ctx }) {
       }
       if (!latestDay.stopLossMode && latestDay.checklist_pass !== true) {
         setRiskCheck(null);
-        showToast("請先完成交易前 Checklist，取得本筆交易許可", "info");
+        showToast("請先完成交易前準備，取得本筆交易許可", "info");
         setNavigationTarget("pre-trade-checklist");
         return;
       }
@@ -437,7 +465,7 @@ export default function PracticeTab({ ctx }) {
       return;
     }
     if (!editingId && !day.stopLossMode && !hasValidTradePermission) {
-      showToast("請先完成交易前 Checklist，取得本筆交易許可", "info");
+      showToast("請先完成交易前準備，取得本筆交易許可", "info");
       setNavigationTarget("pre-trade-checklist");
       return;
     }
@@ -475,7 +503,7 @@ export default function PracticeTab({ ctx }) {
     if (day.bossResists.includes(bossId)) return;
     updateDay((d) => ({ ...d, bossResists: [...d.bossResists, bossId] }));
     addExp(30, "抵抗誘惑");
-    showToast(`你擊退了 ${BOSSES.find((b) => b.id === bossId).name}。+30 EXP`, "reward");
+    showToast(`你擊退了 ${BOSS_DISPLAY_LABEL[bossId] || BOSSES.find((b) => b.id === bossId).name}。+30 EXP`, "reward");
   };
 
   const logViolation = (v) => {
@@ -494,7 +522,7 @@ export default function PracticeTab({ ctx }) {
 
       <div id="morning-calibration" style={{ scrollMarginTop: "16px" }}>
         <SectionLabel>晨間校準</SectionLabel>
-        <Card style={stepCardStyle("morning", day.morning_plan === true)}>
+        <Card style={stepCardStyle("morning", day.morning_plan === true ? "completed" : "pending")}>
         <CurrentStepTag step="morning" />
         {day.morning_plan === true && !showMorningDetails ? (
           <button
@@ -594,8 +622,13 @@ export default function PracticeTab({ ctx }) {
       </div>
 
       <div id="pre-trade-checklist" style={{ scrollMarginTop: "16px" }}>
-        <SectionLabel>交易前 Checklist</SectionLabel>
-        <Card style={stepCardStyle("checklist", day.checklist_pass === true)}>
+        <SectionLabel>交易前準備</SectionLabel>
+        <Card
+          style={stepCardStyle(
+            "checklist",
+            day.morning_plan !== true ? "locked" : day.checklist_pass === true ? "completed" : "pending"
+          )}
+        >
         <CurrentStepTag step="checklist" />
         {day.morning_plan !== true ? (
           <div className="flex items-center gap-2.5 rounded-lg px-3 py-3" style={{ background: C.raised, border: `1px solid ${C.hair}`, color: C.textFaint }}>
@@ -659,7 +692,7 @@ export default function PracticeTab({ ctx }) {
             color: day.checklist_pass ? C.textFaint : allChecked ? C.text : C.textFaint,
           }}
         >
-          {day.checklist_pass ? "已通過" : "標記 Checklist 通過"}
+          {day.checklist_pass ? "已通過" : "完成交易前準備"}
         </button>
         {day.checklist_pass === true && (
           <button
@@ -677,6 +710,23 @@ export default function PracticeTab({ ctx }) {
       </div>
 
       <div id="trade-practice" style={{ scrollMarginTop: "16px" }}>
+        {!showFullPractice ? (
+          <>
+            <SectionLabel>交易紀錄</SectionLabel>
+            <Card style={stepCardStyle("execute", "locked")}>
+              <div className="flex items-center gap-2.5 rounded-lg px-3 py-3" style={{ background: C.raised, border: `1px solid ${C.hair}` }}>
+                <span style={{ color: C.textFaint, fontSize: 15 }}>◇</span>
+                <span>
+                  <span style={{ display: "block", color: C.textDim, fontSize: 12.5, fontWeight: 700 }}>交易紀錄尚未解鎖</span>
+                  <span style={{ display: "block", color: C.textFaint, fontSize: 11.5, marginTop: 2 }}>
+                    {day.morning_plan !== true ? "完成晨間校準後，即可開始交易前準備" : "完成交易前準備，取得本筆執行許可"}
+                  </span>
+                </span>
+              </div>
+            </Card>
+          </>
+        ) : (
+        <>
         <SectionLabel>{editingId ? "編輯交易" : "記錄交易"}</SectionLabel>
         <Card style={stepCardStyle(currentStep === "record" ? "record" : "execute")}>
         <CurrentStepTag step={currentStep === "record" ? "record" : "execute"} />
@@ -739,9 +789,19 @@ export default function PracticeTab({ ctx }) {
                 : day.morning_plan !== true
                   ? "先完成晨間校準，才能開始今日交易"
                   : day.checklist_pass !== true
-                    ? "先完成交易前 Checklist，取得本筆執行許可"
+                    ? "先完成交易前準備，取得本筆執行許可"
                     : "本筆交易許可已取得"}
             </div>
+            {day.trades.length === 0 && hasCompletedChecklistToday && (
+              <button
+                type="button"
+                onClick={() => setShowNoTradeReflection(true)}
+                className="mt-2 w-full rounded-lg py-2 text-xs"
+                style={{ background: "transparent", border: `1px solid ${C.hair}`, color: C.textDim }}
+              >
+                今天停止交易
+              </button>
+            )}
           </div>
         ) : !editingId && mustCompleteProtectionBeforeForm ? (
           <div className="rounded-lg p-3" style={{ background: "rgba(203,163,95,0.08)", border: `1px solid ${C.goldDim}` }}>
@@ -896,7 +956,7 @@ export default function PracticeTab({ ctx }) {
             {!requiredTradeFieldsComplete && (
               <div className="rounded-lg p-3 mb-3" style={{ background: C.raised, border: `1px solid ${C.ashDim}` }}>
                 <div style={{ fontSize: 11, color: C.ash, letterSpacing: 1 }} className="uppercase mb-1.5">
-                  System Validation
+                  系統驗證
                 </div>
                 <div style={{ fontSize: 12, color: C.textDim }}>
                   除備註以外，所有交易欄位都需要完成。
@@ -967,11 +1027,17 @@ export default function PracticeTab({ ctx }) {
         </Card>
       )}
 
+        </>
+        )}
+
       </div>
 
-      {new Date().getHours() >= 18 && day.trades.length === 0 && (
+      {day.morning_plan === true &&
+        hasCompletedChecklistToday &&
+        day.trades.length === 0 &&
+        showNoTradeReflection && (
         <>
-          <SectionLabel>Evening Reflection</SectionLabel>
+          <SectionLabel>晚間檢視</SectionLabel>
           <Card>
             {day.eveningReflection ? (
               <div style={{ fontSize: 12.5, color: C.textDim }}>
@@ -1004,9 +1070,37 @@ export default function PracticeTab({ ctx }) {
         </>
       )}
 
+      {showExtraTraining && (
+      <>
       <SectionLabel>其他修煉紀錄</SectionLabel>
-      <div style={{ color: C.textFaint, fontSize: 11, marginBottom: 6 }}>成功等待</div>
-      <Card style={{ opacity: 0.82 }}>
+      <div className="grid grid-cols-1 gap-2">
+        {[
+          { id: "wait", label: "記錄成功等待" },
+          { id: "temptation", label: "記錄抵抗誘惑" },
+          { id: "violation", label: "誠實記錄違規" },
+        ].map((item) => {
+          const active = activeExtraTraining === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setActiveExtraTraining(active ? null : item.id)}
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left"
+              style={{
+                background: active ? "rgba(203,163,95,0.055)" : C.surface,
+                border: `1px solid ${active ? C.goldDim : C.hair}`,
+                color: active ? C.text : C.textDim,
+              }}
+            >
+              <span style={{ fontSize: 12.5, fontWeight: 700 }}>{item.label}</span>
+              <span style={{ color: active ? C.gold : C.textFaint, fontSize: 13 }}>{active ? "−" : "+"}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {activeExtraTraining === "wait" && (
+      <Card style={{ marginTop: 8, borderColor: C.hair, opacity: 0.9 }}>
         <div style={{ fontSize: 12.5, color: C.textDim }} className="mb-3">
           沒有交易也是一種完整的一天,只要你有意識地選擇等待。
         </div>
@@ -1019,9 +1113,10 @@ export default function PracticeTab({ ctx }) {
           {day.successful_wait ? "已記錄成功等待 +50" : "記錄成功等待 · +50 EXP"}
         </button>
       </Card>
+      )}
 
-      <div style={{ color: C.textFaint, fontSize: 11, margin: "16px 0 6px" }}>抵抗誘惑</div>
-      <Card style={{ opacity: 0.82 }}>
+      {activeExtraTraining === "temptation" && (
+      <Card style={{ marginTop: 8, borderColor: C.hair, opacity: 0.9 }}>
         <div style={{ fontSize: 12.5, color: C.textDim }} className="mb-3">
           今天有心魔想拉你下水,但你忍住了?記下這一刻。
         </div>
@@ -1037,15 +1132,16 @@ export default function PracticeTab({ ctx }) {
                 style={{ background: done ? C.raised : C.raised2, border: `1px solid ${done ? C.hair : C.violetDim}`, color: done ? C.textFaint : C.text }}
               >
                 {done ? "✓ " : ""}
-                {b.name}
+                {BOSS_DISPLAY_LABEL[b.id] || b.name}
               </button>
             );
           })}
         </div>
       </Card>
+      )}
 
-      <div style={{ color: C.textFaint, fontSize: 11, margin: "16px 0 6px" }}>誠實記錄違規</div>
-      <Card style={{ borderColor: C.ashDim, opacity: 0.82 }}>
+      {activeExtraTraining === "violation" && (
+      <Card style={{ marginTop: 8, borderColor: "rgba(154,79,73,0.62)", background: "rgba(90,54,52,0.12)" }}>
         <div style={{ fontSize: 12.5, color: C.textDim }} className="mb-3">
           違規不是失敗,是身份暫時受到污染。誠實記錄,才能真正修復。
         </div>
@@ -1063,6 +1159,9 @@ export default function PracticeTab({ ctx }) {
           ))}
         </div>
       </Card>
+      )}
+      </>
+      )}
 
       {confirmViolation && (
         <ConfirmModal

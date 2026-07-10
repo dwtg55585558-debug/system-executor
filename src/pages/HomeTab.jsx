@@ -7,7 +7,6 @@ import {
   Dumbbell,
   Pencil,
   ScrollText,
-  Shield,
   Target,
 } from "lucide-react";
 import Card from "../components/Card.jsx";
@@ -161,10 +160,7 @@ export default function HomeTab({ ctx }) {
           padding: 16,
         }}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div style={{ color: C.text, fontFamily: FONT_DISPLAY, fontSize: 17 }}>
-            主頁 <span style={{ color: C.textFaint, fontSize: 12 }}>(Home)</span>
-          </div>
+        <div className="flex items-start justify-end gap-3">
           <div
             style={{
               color: C.gold,
@@ -481,32 +477,7 @@ export default function HomeTab({ ctx }) {
         今日狀態
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Card style={{ borderColor: C.hair, background: "rgba(19,20,25,0.86)" }}>
-          <div className="flex items-center gap-3">
-            <div
-              className="flex items-center justify-center shrink-0"
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: "50%",
-                background: "rgba(203,163,95,0.08)",
-                border: `1px solid ${C.goldDim}`,
-                color: C.gold,
-              }}
-            >
-              <Shield size={19} />
-            </div>
-            <div>
-              <div style={{ color: C.textFaint, fontSize: 11, fontFamily: FONT_MONO }}>Integrity</div>
-              <div style={{ color: C.text, fontFamily: FONT_DISPLAY, fontSize: 25, marginTop: 2 }}>
-                {data.identity.integrity}
-                <span style={{ color: C.textFaint, fontSize: 13 }}> /100</span>
-              </div>
-            </div>
-          </div>
-        </Card>
-
+      <div className="grid grid-cols-1 gap-3">
         <Card style={{ borderColor: C.hair, background: "rgba(19,20,25,0.86)" }}>
           <div className="flex items-center gap-3">
             <div

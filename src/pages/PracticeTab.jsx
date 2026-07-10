@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Card from "../components/Card.jsx";
 import SectionLabel from "../components/SectionLabel.jsx";
 import ToggleRow from "../components/ToggleRow.jsx";
@@ -85,7 +85,7 @@ const getAccountProtectionStates = (trades) => {
 };
 
 export default function PracticeTab({ ctx }) {
-  const { day, data, updateDay, addExp, addReward, adjustIntegrity, spendEnergy, showToast, setBossCard } = ctx;
+  const { day, data, updateDay, addExp, addReward, adjustIntegrity, spendEnergy, showToast, setTab, setBossCard, navigationTarget, setNavigationTarget } = ctx;
   const latestDayRef = useRef(day);
   latestDayRef.current = day;
   const [editingId, setEditingId] = useState(null);
@@ -122,6 +122,20 @@ export default function PracticeTab({ ctx }) {
   const allCalibrationChecked = morningCalibrationItems.every((item) => calibrationChecks[item.id] || day.morning_plan);
   const allChecked = CHECKLIST_ITEMS.every((c) => day.checklistChecks[c.id]);
 
+  useEffect(() => {
+    const supportedTargets = ["morning-calibration", "pre-trade-checklist", "trade-practice"];
+    if (!supportedTargets.includes(navigationTarget)) return undefined;
+
+    const animationFrame = requestAnimationFrame(() => {
+      const element = document.getElementById(navigationTarget);
+      if (!element) return;
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+      setNavigationTarget(null);
+    });
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [navigationTarget, setNavigationTarget]);
+
   const toggleCheck = (id) => {
     if (day.checklist_pass) return;
     updateDay((d) => ({ ...d, checklistChecks: { ...d.checklistChecks, [id]: !d.checklistChecks[id] } }));
@@ -131,6 +145,7 @@ export default function PracticeTab({ ctx }) {
     updateDay((d) => ({ ...d, checklist_pass: true }));
     addReward({ exp: 20, label: "交易前 Checklist", statKey: "discipline" });
     showToast("交易前 Checklist 完成｜EXP +20｜紀律 +1", "reward");
+    setTab("home");
   };
 
   const completeMorningPlan = () => {
@@ -138,6 +153,7 @@ export default function PracticeTab({ ctx }) {
     updateDay((d) => ({ ...d, morning_plan: true, identityStatement: executionGoal }));
     addReward({ exp: 10, label: "晨間校準", statKey: "focus" });
     showToast("晨間校準完成｜EXP +10｜專注 +1", "reward");
+    setTab("home");
   };
 
   const toggleCalibrationCheck = (id) => {
@@ -323,6 +339,7 @@ export default function PracticeTab({ ctx }) {
     updateDay((d) => ({ ...d, successful_wait: true }));
     addReward({ exp: 50, label: "成功等待", statKey: "discipline" });
     showToast("成功等待完成｜EXP +50｜紀律 +1", "reward");
+    setTab("home");
   };
 
   const resistBoss = (bossId) => {
@@ -346,8 +363,9 @@ export default function PracticeTab({ ctx }) {
         修練
       </div>
 
-      <SectionLabel>晨間校準</SectionLabel>
-      <Card>
+      <div id="morning-calibration" style={{ scrollMarginTop: "16px" }}>
+        <SectionLabel>晨間校準</SectionLabel>
+        <Card>
         <div style={{ fontSize: 12, color: C.textFaint }} className="mb-1.5">
           今日唯一執行目標
         </div>
@@ -412,10 +430,12 @@ export default function PracticeTab({ ctx }) {
         >
           {day.morning_plan ? "已完成" : "完成晨間校準"}
         </button>
-      </Card>
+        </Card>
+      </div>
 
-      <SectionLabel>交易前 Checklist</SectionLabel>
-      <Card>
+      <div id="pre-trade-checklist" style={{ scrollMarginTop: "16px" }}>
+        <SectionLabel>交易前 Checklist</SectionLabel>
+        <Card>
         {CHECKLIST_ITEMS.map((c) => (
           <div key={c.id} onClick={() => toggleCheck(c.id)} className="flex items-center gap-2.5 py-1.5" style={{ cursor: day.checklist_pass ? "default" : "pointer" }}>
             <div
@@ -443,10 +463,12 @@ export default function PracticeTab({ ctx }) {
         >
           {day.checklist_pass ? "已通過" : "標記 Checklist 通過"}
         </button>
-      </Card>
+        </Card>
+      </div>
 
-      <SectionLabel>{editingId ? "編輯交易" : "記錄交易"}</SectionLabel>
-      <Card>
+      <div id="trade-practice" style={{ scrollMarginTop: "16px" }}>
+        <SectionLabel>{editingId ? "編輯交易" : "記錄交易"}</SectionLabel>
+        <Card>
         {activeProtectionTypes.length > 0 && (
           <div className="space-y-2 mb-3">
             {activeProtectionTypes.map(([type, state]) => (
@@ -627,7 +649,7 @@ export default function PracticeTab({ ctx }) {
             </div>
           </>
         )}
-      </Card>
+        </Card>
 
       {day.trades.length > 0 && (
         <Card style={{ marginTop: 8 }}>
@@ -677,6 +699,7 @@ export default function PracticeTab({ ctx }) {
           {day.successful_wait ? "已記錄成功等待 +50" : "記錄成功等待 · +50 EXP"}
         </button>
       </Card>
+      </div>
 
       {new Date().getHours() >= 18 && day.trades.length === 0 && (
         <>

@@ -8,7 +8,7 @@ import { C } from "../styles/theme.js";
 import { EMOTION_TAGS } from "../utils/constants.js";
 
 export default function JournalTab({ ctx }) {
-  const { day, updateDay, addReward, showToast } = ctx;
+  const { day, updateDay, addReward, showToast, setTab, navigationTarget, setNavigationTarget } = ctx;
   const existing = day.journal;
   const journalRewardClaimed =
     !!day.claimedRewards?.journal ||
@@ -42,6 +42,19 @@ export default function JournalTab({ ctx }) {
       setEditingJournal(true);
     }
   }, [existing]);
+
+  useEffect(() => {
+    if (navigationTarget !== "decision-journal") return undefined;
+
+    const animationFrame = requestAnimationFrame(() => {
+      const element = document.getElementById(navigationTarget);
+      if (!element) return;
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+      setNavigationTarget(null);
+    });
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [navigationTarget, setNavigationTarget]);
 
   const startEdit = () => {
     if (!existing) return;
@@ -105,6 +118,7 @@ export default function JournalTab({ ctx }) {
         addReward({ exp: 20, label: "Decision Journal", statKey: "observation" });
         showToast("Decision Journal 完成｜EXP +20｜觀察 +1", "reward");
       }
+      setTab("home");
     }
   };
 
@@ -133,6 +147,7 @@ export default function JournalTab({ ctx }) {
         </Card>
       )}
 
+      <div id="decision-journal" style={{ scrollMarginTop: "16px" }}>
       {existing && (
         <Card className="mb-3" style={{ borderColor: C.hair, background: "rgba(19,20,25,0.72)" }}>
           <div className="flex items-center justify-between gap-3">
@@ -239,6 +254,7 @@ export default function JournalTab({ ctx }) {
           最後修改:{new Date(existing.edited_at).toLocaleString()}
         </div>
       )}
+      </div>
 
       <HistoryList history={history} today={ctx.today} onSelect={ctx.setReviewDate} />
     </div>

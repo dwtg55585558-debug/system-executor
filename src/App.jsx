@@ -18,6 +18,7 @@ import { C, FONT_BODY } from "./styles/theme.js";
 
 export default function App() {
   const [tab, setTab] = useState("home");
+  const [navigationTarget, setNavigationTarget] = useState(null);
   const [bossCard, setBossCard] = useState(null);
   const [reviewDate, setReviewDate] = useState(null);
   const [showCalibration, setShowCalibration] = useState(true);
@@ -68,6 +69,8 @@ export default function App() {
     updateDay,
     showToast,
     setTab,
+    navigationTarget,
+    setNavigationTarget,
     updateIdentityName,
     setBossCard,
     setReviewDate,

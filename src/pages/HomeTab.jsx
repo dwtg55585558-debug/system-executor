@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   AlertTriangle,
   BookOpen,
@@ -23,6 +23,7 @@ export default function HomeTab({ ctx }) {
     updateDay,
     showToast,
     setTab,
+    setNavigationTarget,
     updateIdentityName,
     data,
     lvl,
@@ -34,13 +35,18 @@ export default function HomeTab({ ctx }) {
   const [showDataManagement, setShowDataManagement] = useState(false);
   const quote = QUOTES[new Date().getDate() % QUOTES.length];
 
+  const navigateTo = (tab, target) => {
+    setNavigationTarget(target);
+    setTab(tab);
+  };
+
   const stopLossMode = !!day.stopLossMode;
   const gapDays = journalGapDays(data.history);
   const tradeTrainingDone = !!(day.strategy_trade || day.successful_wait);
   const coreStages = [
     { key: "morning", label: "晨間校準", done: !!day.morning_plan },
     { key: "checklist", label: "交易前準備", done: !!day.checklist_pass },
-    { key: "training", label: "交易修煉", done: tradeTrainingDone },
+    { key: "training", label: "策略執行", done: tradeTrainingDone },
     { key: "journal", label: "今日復盤", done: !!day.journal },
   ];
   const completedCoreCount = coreStages.filter((stage) => stage.done).length;
@@ -49,19 +55,21 @@ export default function HomeTab({ ctx }) {
 
   let nextAction;
   if (!day.morning_plan) {
-    nextAction = { title: "開始晨間校準", description: "先設定今日交易邊界。", tab: "practice" };
+    nextAction = { title: "開始晨間校準", description: "先設定今日交易邊界。", cta: "開始校準", tab: "practice", target: "morning-calibration" };
   } else if (!day.checklist_pass) {
-    nextAction = { title: "完成交易前 Checklist", description: "確認條件後再進入交易。", tab: "practice" };
+    nextAction = { title: "完成交易前 Checklist", description: "確認條件後再進入交易。", cta: "完成 Checklist", tab: "practice", target: "pre-trade-checklist" };
   } else if (!tradeTrainingDone) {
     nextAction = {
-      title: "完成今日交易修煉",
+      title: "完成今日策略執行",
       description: "記錄符合策略交易，或在沒有機會時完成成功等待。",
+      cta: "前往修煉",
       tab: "practice",
+      target: "trade-practice",
     };
   } else if (!day.journal) {
-    nextAction = { title: "完成今日復盤", description: "用 Decision Journal 結束今日修煉。", tab: "journal" };
+    nextAction = { title: "完成今日復盤", description: "用 Decision Journal 結束今日修煉。", cta: "開始復盤", tab: "journal", target: "decision-journal" };
   } else {
-    nextAction = { title: "今日修煉已完成", description: "今天的交易修煉閉環已完成。", complete: true };
+    nextAction = { title: "今日修煉已完成", description: "今天的修煉閉環已完成。", complete: true };
   }
 
   const expPct = lvl.expToNext ? Math.round((lvl.expInto / lvl.expToNext) * 100) : 100;
@@ -86,6 +94,7 @@ export default function HomeTab({ ctx }) {
       : energy === 0
         ? { label: "今日額度已用完", color: "#D19A42", dim: "#6B4E27" }
         : { label: "過度交易", color: "#B9574F", dim: "#653735" };
+  const energyValueColor = stopLossMode || energy < 0 ? "#B9574F" : C.gold;
 
   const toggleManual = (id, exp, label, statKey) => {
     if (day[id]) return;
@@ -137,25 +146,25 @@ export default function HomeTab({ ctx }) {
           background:
             "radial-gradient(circle at 18% 4%, rgba(203,163,95,0.2), transparent 30%), linear-gradient(145deg, rgba(7,8,11,0.99), rgba(15,16,21,0.98) 58%, rgba(25,22,17,0.98))",
           boxShadow: "0 18px 38px rgba(0,0,0,0.4), inset 0 1px 0 rgba(203,163,95,0.16)",
-          padding: 14,
+          padding: "12px 14px",
         }}
       >
         <div className="flex items-center justify-between gap-3">
-          <div style={{ color: C.gold, fontFamily: FONT_DISPLAY, fontSize: 28, lineHeight: 1 }}>
+          <div style={{ color: C.gold, fontFamily: FONT_DISPLAY, fontSize: 25, lineHeight: 1 }}>
             Lv.{lvl.level}
           </div>
           <div className="text-right">
             <div style={{ color: C.gold, fontSize: 12, fontWeight: 700 }}>{rankTitle}</div>
-            <div style={{ color: C.textFaint, fontFamily: FONT_MONO, fontSize: 10, marginTop: 2 }}>{ctx.today}</div>
+            <div style={{ color: "rgba(126,130,142,0.62)", fontFamily: FONT_MONO, fontSize: 9, marginTop: 2 }}>{ctx.today}</div>
           </div>
         </div>
 
-        <div className="mt-3 flex items-center gap-3">
+        <div className="mt-2.5 flex items-center gap-3">
           <div
             className="shrink-0 flex items-center justify-center"
             style={{
-              width: 92,
-              height: 92,
+              width: 84,
+              height: 84,
               borderRadius: "50%",
               border: "1px solid rgba(203,163,95,0.36)",
               background: "radial-gradient(circle at 50% 42%, rgba(203,163,95,0.3), rgba(10,11,14,0.92) 56%, #040507)",
@@ -168,7 +177,6 @@ export default function HomeTab({ ctx }) {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 min-w-0">
               <div className="min-w-0 flex-1">
-                <div style={{ color: C.textFaint, fontFamily: FONT_MONO, fontSize: 10 }}>修煉者名稱</div>
                 <div style={{ color: C.text, fontFamily: FONT_DISPLAY, fontSize: 19, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {cultivatorName}
                 </div>
@@ -184,7 +192,7 @@ export default function HomeTab({ ctx }) {
               </button>
             </div>
 
-            <div className="mt-3 h-2 overflow-hidden rounded-full" style={{ background: "rgba(42,44,54,0.86)" }}>
+            <div className="mt-2.5 h-2 overflow-hidden rounded-full" style={{ background: "rgba(42,44,54,0.86)" }}>
               <div style={{ width: `${expPct}%`, height: "100%", background: `linear-gradient(90deg, ${C.goldDim}, ${C.gold})` }} />
             </div>
             <div className="mt-1.5 flex justify-between gap-2" style={{ fontFamily: FONT_MONO, fontSize: 10 }}>
@@ -207,8 +215,8 @@ export default function HomeTab({ ctx }) {
               <Check size={16} /> 完成
             </div>
           ) : (
-            <button type="button" onClick={() => setTab(nextAction.tab)} className="shrink-0 rounded-lg px-4 py-2 text-sm font-medium" style={{ background: C.goldDim, color: C.text }}>
-              前往
+            <button type="button" onClick={() => navigateTo(nextAction.tab, nextAction.target)} className="shrink-0 rounded-lg px-4 py-2 text-sm font-medium" style={{ minHeight: 40, background: C.goldDim, color: C.text }}>
+              {nextAction.cta}
             </button>
           )}
         </div>
@@ -228,7 +236,7 @@ export default function HomeTab({ ctx }) {
         </Card>
       )}
 
-      <div className="mt-5 mb-2 flex items-end justify-between gap-3">
+      <div className="mt-4 mb-2 flex items-end justify-between gap-3">
         <div style={sectionTitleStyle}>今日修煉</div>
         <div style={{ color: C.gold, fontFamily: FONT_MONO, fontSize: 12 }}>{completedCoreCount} / 4</div>
       </div>
@@ -237,11 +245,11 @@ export default function HomeTab({ ctx }) {
           <div className="h-full rounded-full" style={{ width: `${coreProgress}%`, background: C.sage }} />
         </div>
         {coreStages.map((stage, index) => {
-          const status = stage.done ? "已完成" : index === nextIncompleteIndex ? "進行中" : "尚未完成";
+          const status = stage.done ? "已完成" : index === nextIncompleteIndex ? "下一步" : "尚未完成";
           return (
             <div key={stage.key} className="flex items-center justify-between gap-3" style={{ borderTop: index === 0 ? "none" : `1px solid ${C.hair}`, padding: "11px 2px" }}>
               <div style={{ color: stage.done ? C.textDim : C.text, fontSize: 13.5, fontWeight: 700 }}>{stage.label}</div>
-              <div className="flex items-center gap-2" style={{ color: stage.done ? C.sage : C.textFaint, fontSize: 11.5 }}>
+              <div className="flex items-center gap-2" style={{ color: stage.done ? C.sage : index === nextIncompleteIndex ? C.gold : C.textFaint, fontSize: 11.5 }}>
                 {status}
                 <span className="flex items-center justify-center" style={{ width: 22, height: 22, borderRadius: "50%", border: `1px solid ${stage.done ? C.sage : C.hair}`, background: stage.done ? "rgba(62,90,73,0.45)" : "transparent" }}>
                   {stage.done && <Check size={13} strokeWidth={3} />}
@@ -252,31 +260,13 @@ export default function HomeTab({ ctx }) {
         })}
       </Card>
 
-      <div className="mt-5 mb-2" style={sectionTitleStyle}>附加修煉</div>
-      <Card style={{ borderColor: C.hair, background: "rgba(19,20,25,0.86)", padding: 12 }}>
-        {[
-          { id: "workout", label: "健身", exp: 20, statKey: "mindset", icon: Dumbbell },
-          { id: "reading", label: "閱讀", exp: 20, statKey: "insight", icon: BookOpen },
-        ].map((task, index) => {
-          const Icon = task.icon;
-          const done = !!day[task.id];
-          return (
-            <button key={task.id} type="button" disabled={done} onClick={() => toggleManual(task.id, task.exp, task.label, task.statKey)} className="flex w-full items-center justify-between gap-3 text-left" style={{ borderTop: index === 0 ? "none" : `1px solid ${C.hair}`, padding: "12px 2px", cursor: done ? "default" : "pointer" }}>
-              <span className="flex items-center gap-3" style={{ color: done ? C.textDim : C.text, fontSize: 13.5, fontWeight: 700 }}><Icon size={16} color={done ? C.sage : C.textDim} />{task.label}</span>
-              <span className="flex items-center gap-1.5" style={{ color: done ? C.sage : C.textFaint, fontSize: 11.5 }}>{done ? "已完成" : "點擊完成"}{done && <Check size={14} />}</span>
-            </button>
-          );
-        })}
-      </Card>
-
-      <div className="mt-5 mb-2" style={sectionTitleStyle}>今日交易資源</div>
+      <div className="mt-4 mb-2" style={sectionTitleStyle}>每日交易能量</div>
       <Card style={{ borderColor: stopLossMode ? "rgba(185,87,79,0.72)" : C.hair, background: stopLossMode ? "linear-gradient(135deg, rgba(90,54,52,0.3), rgba(19,20,25,0.9))" : "rgba(19,20,25,0.86)" }}>
         <div className="flex items-center justify-between gap-3">
-          <div style={{ color: stopLossMode ? "#B9574F" : C.text, fontFamily: FONT_DISPLAY, fontSize: 17 }}>{stopLossMode ? "止血模式中" : "今日交易資源"}</div>
+          <div style={{ color: energyValueColor, fontFamily: FONT_DISPLAY, fontSize: 24 }}>Energy {energy} <span style={{ color: C.textFaint, fontSize: 13 }}>/ {maxEnergy}</span></div>
           <div style={{ color: energyState.color, fontSize: 11, fontWeight: 800 }}>{energyState.label}</div>
         </div>
-        <div className="mt-3 flex items-end justify-between gap-3">
-          <div style={{ color: energyState.color, fontFamily: FONT_DISPLAY, fontSize: 24 }}>Energy {energy} <span style={{ color: C.textFaint, fontSize: 13 }}>/ {maxEnergy}</span></div>
+        <div className="mt-2 flex items-end justify-end gap-3">
           <div style={{ color: C.textDim, fontSize: 12 }}>今日交易筆數：{day.trades.length}</div>
         </div>
         <div className="mt-2 h-1.5 overflow-hidden rounded-full" style={{ background: "rgba(42,44,54,0.86)" }}>
@@ -286,10 +276,27 @@ export default function HomeTab({ ctx }) {
           {stopLossMode ? "交易仍可紀錄，但今日不再獲得交易紀錄獎勵。" : "每筆交易消耗 10"}
         </div>
         {!stopLossMode && (
-          <button type="button" onClick={enterStopLossMode} className="mt-3 rounded-lg px-3 py-2 text-xs font-medium" style={{ background: "rgba(90,54,52,0.42)", border: "1px solid rgba(185,87,79,0.56)", color: C.text }}>
+          <button type="button" onClick={enterStopLossMode} className="mt-3 rounded-lg px-3 py-2 text-xs font-medium" style={{ minHeight: 40, background: "rgba(90,54,52,0.42)", border: "1px solid rgba(185,87,79,0.56)", color: C.text }}>
             進入止血模式
           </button>
         )}
+      </Card>
+
+      <div className="mt-4 mb-2" style={sectionTitleStyle}>附加修煉</div>
+      <Card style={{ borderColor: C.hair, background: "rgba(19,20,25,0.86)", padding: 12 }}>
+        {[
+          { id: "workout", label: "健身", exp: 20, statKey: "mindset", icon: Dumbbell },
+          { id: "reading", label: "閱讀", exp: 20, statKey: "insight", icon: BookOpen },
+        ].map((task, index) => {
+          const Icon = task.icon;
+          const done = !!day[task.id];
+          return (
+            <button key={task.id} type="button" disabled={done} onClick={() => toggleManual(task.id, task.exp, task.label, task.statKey)} className="flex w-full items-center justify-between gap-3 text-left" style={{ minHeight: 40, borderTop: index === 0 ? "none" : `1px solid ${C.hair}`, padding: "9px 2px", cursor: done ? "default" : "pointer" }}>
+              <span className="flex items-center gap-3" style={{ color: done ? C.textDim : C.text, fontSize: 13.5, fontWeight: 700 }}><Icon size={16} color={done ? C.sage : C.textDim} />{task.label}</span>
+              <span className="flex items-center gap-1.5" style={{ color: done ? C.sage : C.textFaint, fontSize: 11.5 }}>{done ? "已完成" : "點擊完成"}{done && <Check size={14} />}</span>
+            </button>
+          );
+        })}
       </Card>
 
       <Card className="mt-3" style={{ borderColor: C.hair, background: "rgba(19,20,25,0.72)", padding: 12 }}>
@@ -309,18 +316,18 @@ export default function HomeTab({ ctx }) {
         )}
       </Card>
 
-      <Card className="mt-3" style={{ borderColor: C.goldDim, background: "linear-gradient(135deg, rgba(19,20,25,0.96), rgba(27,29,36,0.72))", padding: 12 }}>
+      <Card className="mt-3" style={{ borderColor: C.goldDim, background: "linear-gradient(135deg, rgba(19,20,25,0.96), rgba(27,29,36,0.72))", padding: "10px 12px" }}>
         <div className="flex items-start gap-2"><ScrollText size={14} color={C.gold} className="mt-0.5 shrink-0" /><div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, color: C.textDim, lineHeight: 1.5 }}>{quote}</div></div>
       </Card>
 
-      <div className="mt-5 flex flex-col items-center gap-2">
-        <button type="button" onClick={() => setShowDataManagement((value) => !value)} aria-expanded={showDataManagement} className="rounded-lg px-3 py-2 text-xs" style={{ background: "transparent", border: "1px solid rgba(126,130,142,0.22)", color: C.textFaint }}>
+      <div className="mt-4 flex flex-col items-center gap-2">
+        <button type="button" onClick={() => setShowDataManagement((value) => !value)} aria-expanded={showDataManagement} className="rounded-lg px-3 py-2 text-xs" style={{ minHeight: 40, background: "transparent", border: "1px solid rgba(126,130,142,0.22)", color: C.textFaint }}>
           資料管理
         </button>
         {showDataManagement && (
           <div className="flex justify-center gap-2">
-            <button type="button" onClick={confirmResetToday} className="rounded-lg px-3 py-2 text-xs" style={{ background: "transparent", border: "1px solid rgba(126,130,142,0.28)", color: C.textFaint }}>重置今日</button>
-            <button type="button" onClick={confirmResetAll} className="rounded-lg px-3 py-2 text-xs" style={{ background: "transparent", border: "1px solid rgba(90,54,52,0.38)", color: C.textFaint }}>重置整個角色</button>
+            <button type="button" onClick={confirmResetToday} className="rounded-lg px-3 py-2 text-xs" style={{ minHeight: 40, background: "transparent", border: "1px solid rgba(126,130,142,0.28)", color: C.textFaint }}>重置今日</button>
+            <button type="button" onClick={confirmResetAll} className="rounded-lg px-3 py-2 text-xs" style={{ minHeight: 40, background: "transparent", border: "1px solid rgba(90,54,52,0.38)", color: C.textFaint }}>重置整個角色</button>
           </div>
         )}
       </div>

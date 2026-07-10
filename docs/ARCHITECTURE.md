@@ -209,7 +209,7 @@ Insight is analytics-focused and computes:
 - boss violation frequency
 - decision quality trend
 - cumulative EXP growth
-- 28-day streak heatmap
+- training calendar
 
 Most insight calculations are inline selectors inside the component.
 
@@ -232,7 +232,7 @@ These components are broadly reusable:
 ### Reusable Visualization Components
 
 - `IdentityRing`
-- `StreakHeatmap`
+- `TrainingCalendar`
 
 ### Feature-Specific Components
 
@@ -252,7 +252,8 @@ These components are tied to product workflows:
 
 `HistoryList` passes `onClick` into `Card`, but `Card` does not forward unknown props to its root `<div>`. As written, history rows appear clickable but the `onSelect` handler is likely not invoked from `HistoryList`.
 
-`StreakHeatmap` uses native `<button>` elements and should still trigger day review correctly.
+`TrainingCalendar` uses native `<button>` elements and should still trigger day review correctly.
+Its completion color is based on the trading-training loop: morning plan, checklist pass, journal, and either successful waiting or a followed-checklist trade. Workout and reading are not part of this calendar status.
 
 ## Utilities and Domain Rules
 

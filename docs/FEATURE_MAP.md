@@ -506,7 +506,7 @@ Features:
 - Decision quality trend.
 - Emotion distribution.
 - Boss frequency.
-- 28-day completion heatmap.
+- Training calendar for monthly review.
 
 Derived Metrics:
 
@@ -522,12 +522,13 @@ Derived Metrics:
 Components:
 
 - `StatBlock`
-- `StreakHeatmap`
+- `TrainingCalendar`
 - Recharts area, line, and bar charts
 
 Notes:
 
 - Decision quality scoring is inline in this page and should become a selector if reused elsewhere.
+- The training calendar marks a day red when violations exist. Otherwise it marks a day green only when the trading-training loop is complete: morning plan, checklist pass, journal, and either successful waiting or a followed-checklist trade. Workout and reading do not affect calendar completion.
 
 ## Day Replay
 
@@ -545,7 +546,7 @@ Purpose:
 
 Entry Points:
 
-- `StreakHeatmap` in Insight.
+- `TrainingCalendar` in Insight.
 - Intended from `HistoryList` in Journal, though currently affected by the `Card` prop forwarding issue.
 
 Features:
@@ -644,7 +645,7 @@ General reusable components:
 Reusable but domain-specific components:
 
 - `IdentityRing`
-- `StreakHeatmap`
+- `TrainingCalendar`
 - `HistoryList`
 - `JournalSummaryRow`
 - `MentorRow`

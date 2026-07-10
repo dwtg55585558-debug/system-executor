@@ -3,7 +3,7 @@ import { ResponsiveContainer, LineChart, Line, AreaChart, Area, BarChart, Bar, X
 import Card from "../components/Card.jsx";
 import SectionLabel from "../components/SectionLabel.jsx";
 import StatBlock from "../components/StatBlock.jsx";
-import StreakHeatmap from "../components/StreakHeatmap.jsx";
+import TrainingCalendar from "../components/TrainingCalendar.jsx";
 import { C } from "../styles/theme.js";
 import { BOSSES, VIOLATION_TYPES, EMOTION_TAGS } from "../utils/constants.js";
 import { clamp } from "../utils/helpers.js";
@@ -140,9 +140,9 @@ export default function InsightTab({ ctx }) {
         </div>
       </Card>
 
-      <SectionLabel>連續完成任務(近 28 天,點擊可回顧)</SectionLabel>
+      <SectionLabel>修練月曆</SectionLabel>
       <Card>
-        <StreakHeatmap history={data.history} onSelect={ctx.setReviewDate} />
+        <TrainingCalendar history={data.history} onSelect={ctx.setReviewDate} />
       </Card>
     </div>
   );

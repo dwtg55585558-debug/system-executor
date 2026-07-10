@@ -83,6 +83,7 @@ state
       checklist_pass
       checklistChecks
       trades
+      stopLossMode
       successful_wait
       violations
       bossResists
@@ -90,12 +91,21 @@ state
       riskEvents
       eveningReflection
       aiMentor
+      claimedRewards
+  dailySnapshots
+    YYYY-MM-DD
+      day
+      identity
+      expLog
+      achievementsUnlocked
   expLog
   integrityLog
   achievementsUnlocked
 ```
 
 The active day is derived with `todayStr()` and read as `data.history[today]`. If a missing day is detected, `useAppState` inserts `emptyDay(today)`.
+
+`dailySnapshots[date]` stores the daily start baseline for reset-today behavior. It captures the daily quest fields, stop-loss mode, claimed reward flags, identity EXP, Energy, stats, EXP log, and unlocked achievements as they were at day initialization. Resetting today restores those baseline fields while preserving identity name and recorded trade/journal history.
 
 `identity.name` is the cultivator display name shown on the Home character card. New default state leaves it empty so first-time users must create an identity name. Older saved states without `identity.name` are migrated to `執行者`.
 
@@ -117,6 +127,8 @@ The active day is derived with `todayStr()` and read as `data.history[today]`. I
 - `spendEnergy(amount)`
 - `updateDay(mutator)`
 - `updateHistoryDay(date, mutator)`
+- `resetTodayToBaseline()`
+- `resetAllData()`
 - `resetProgress()`
 - `clearUnlockedAchievement()`
 
@@ -133,6 +145,7 @@ Home is the daily dashboard. It renders:
 - quote
 - journal gap warning
 - daily quest checklist
+- low-emphasis reset controls for today's baseline and full character data
 
 It derives completion state from today's day object. Home shows morning calibration as a status summary and routes incomplete users to Practice. Manual task completion for workout and reading is handled inline and awards EXP directly from the page.
 
@@ -163,8 +176,9 @@ Journal renders the five-question daily journal and today's trading summary. It 
 - local journal form state
 - journal required-field validation
 - journal creation and update
+- journal deletion
 - journal edit-history diffing
-- journal EXP award
+- journal EXP award and claimed-reward guard
 - recent history list construction
 
 ### `SystemTab`

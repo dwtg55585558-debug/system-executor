@@ -19,7 +19,18 @@ import { titleForLevel } from "../utils/levels.js";
 import executorApprentice from "../assets/characters/executor-apprentice.png";
 
 export default function HomeTab({ ctx }) {
-  const { day, addReward, updateDay, showToast, setTab, updateIdentityName, data, lvl } = ctx;
+  const {
+    day,
+    addReward,
+    updateDay,
+    showToast,
+    setTab,
+    updateIdentityName,
+    data,
+    lvl,
+    resetTodayToBaseline,
+    resetAllData,
+  } = ctx;
   const [editingName, setEditingName] = useState(false);
   const quote = QUOTES[new Date().getDate() % QUOTES.length];
 
@@ -113,25 +124,20 @@ export default function HomeTab({ ctx }) {
     showToast("已進入止血模式｜今日只允許復盤與停止", "info");
   };
 
-  const resetTodayState = () => {
+  const confirmResetToday = () => {
     const confirmed = window.confirm(
-      "確定要重置今日狀態嗎？這只會重置今日任務與止血模式，不會刪除角色、EXP、屬性或交易紀錄。"
+      "確定要重置今日嗎？這會把今日任務、Energy、EXP、屬性成長等恢復到今日開始時的狀態，但不會重置角色名稱或歷史資料。"
     );
     if (!confirmed) return;
+    resetTodayToBaseline();
+  };
 
-    updateDay((d) => ({
-      ...d,
-      calibration_done: false,
-      morning_plan: false,
-      workout: false,
-      reading: false,
-      checklist_pass: false,
-      checklistChecks: {},
-      strategy_trade: false,
-      successful_wait: false,
-      stopLossMode: false,
-    }));
-    showToast("今日狀態已重置", "info");
+  const confirmResetAll = () => {
+    const confirmed = window.confirm(
+      "確定要重置整個角色嗎？這會清除角色名稱、EXP、等級、屬性、Energy、任務、交易紀錄與日誌，並回到首次建立身份畫面。"
+    );
+    if (!confirmed) return;
+    resetAllData();
   };
 
   const questIcon = (row) => {
@@ -591,10 +597,10 @@ export default function HomeTab({ ctx }) {
         </div>
       </Card>
 
-      <div className="mt-5 mb-1 flex justify-center">
+      <div className="mt-5 mb-1 flex justify-center gap-2">
         <button
           type="button"
-          onClick={resetTodayState}
+          onClick={confirmResetToday}
           className="rounded-lg px-3 py-2 text-xs"
           style={{
             background: "transparent",
@@ -602,7 +608,19 @@ export default function HomeTab({ ctx }) {
             color: C.textFaint,
           }}
         >
-          重置今日狀態
+          重置今日
+        </button>
+        <button
+          type="button"
+          onClick={confirmResetAll}
+          className="rounded-lg px-3 py-2 text-xs"
+          style={{
+            background: "transparent",
+            border: `1px solid rgba(90,54,52,0.38)`,
+            color: C.textFaint,
+          }}
+        >
+          重置整個角色
         </button>
       </div>
 

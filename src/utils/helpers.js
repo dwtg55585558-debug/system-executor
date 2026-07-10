@@ -37,10 +37,50 @@ export function emptyDay(date) {
   };
 }
 
+function cloneValue(value) {
+  if (value === undefined) return undefined;
+  return JSON.parse(JSON.stringify(value));
+}
+
+export function dailyBaselineSnapshot(data, date = todayStr()) {
+  const day = data.history?.[date] || emptyDay(date);
+  const snapshotDay = {
+    calibration_done: day.calibration_done,
+    morning_plan: day.morning_plan,
+    identityStatement: day.identityStatement,
+    workout: day.workout,
+    reading: day.reading,
+    checklist_pass: day.checklist_pass,
+    checklistChecks: cloneValue(day.checklistChecks || {}),
+    strategy_trade: day.strategy_trade,
+    successful_wait: day.successful_wait,
+    stopLossMode: day.stopLossMode,
+  };
+
+  if (day.claimedRewards !== undefined) {
+    snapshotDay.claimedRewards = cloneValue(day.claimedRewards);
+  }
+
+  return {
+    date,
+    createdAt: Date.now(),
+    day: snapshotDay,
+    identity: {
+      totalExp: data.identity.totalExp,
+      energy: data.identity.energy,
+      maxEnergy: data.identity.maxEnergy,
+      energyDate: data.identity.energyDate,
+      stats: cloneValue(data.identity.stats),
+    },
+    expLog: cloneValue(data.expLog || []),
+    achievementsUnlocked: cloneValue(data.achievementsUnlocked || []),
+  };
+}
+
 export function defaultState() {
   const today = todayStr();
 
-  return {
+  const state = {
     identity: {
       name: "",
       totalExp: 0,
@@ -54,7 +94,11 @@ export function defaultState() {
     expLog: [],
     integrityLog: [{ date: today, value: 100 }],
     achievementsUnlocked: [],
+    dailySnapshots: {},
   };
+
+  state.dailySnapshots[today] = dailyBaselineSnapshot(state, today);
+  return state;
 }
 
 /* Decision Risk Monitor: five-condition detector, replaces a fixed "Nth trade" rule */

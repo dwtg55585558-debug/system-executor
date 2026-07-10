@@ -36,6 +36,8 @@ export default function App() {
     spendEnergy,
     updateDay,
     updateHistoryDay,
+    resetTodayToBaseline,
+    resetAllData,
     resetProgress,
     unlockedAchievement,
     clearUnlockedAchievement,
@@ -70,12 +72,19 @@ export default function App() {
     setBossCard,
     setReviewDate,
     updateHistoryDay,
+    resetTodayToBaseline,
+    resetAllData,
   };
 
   const needsNameSetup = !data.identity.name || data.identity.name.trim() === "";
 
   if (needsNameSetup) {
-    return <CultivatorNameModal onSave={updateIdentityName} />;
+    return (
+      <>
+        <CultivatorNameModal onSave={updateIdentityName} />
+        {toast && <Toast toast={toast} />}
+      </>
+    );
   }
 
   return (

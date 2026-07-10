@@ -101,6 +101,7 @@ Fields:
 - `checklist_pass`
 - `checklistChecks`
 - `trades`
+- `stopLossMode`
 - `successful_wait`
 - `violations`
 - `bossResists`
@@ -108,6 +109,26 @@ Fields:
 - `riskEvents`
 - `eveningReflection`
 - `aiMentor`
+- `claimedRewards`
+
+### Daily Baselines
+
+Stored under `dailySnapshots[YYYY-MM-DD]`.
+
+Purpose:
+
+- Preserve the daily start baseline for the Home reset-today control.
+
+Captured fields:
+
+- daily quest and calibration state
+- `stopLossMode`
+- `claimedRewards`
+- identity EXP, Energy, Energy date, max Energy, and stats
+- `expLog`
+- `achievementsUnlocked`
+
+Reset-today restores these captured fields while preserving the cultivator name, character creation state, prior date history, trade records, and journal records.
 
 ## Feature Areas
 
@@ -379,6 +400,7 @@ Features:
 - Required validation for questions 1, 2, and 5.
 - Journal creation.
 - Journal editing with field-level edit history.
+- Journal deletion after confirmation.
 - Recent history list.
 
 Journal fields:
@@ -397,6 +419,8 @@ Reward:
 
 - +20 EXP on first journal completion.
 - No additional EXP for edits.
+- No EXP rollback on deletion.
+- `day.claimedRewards.journal` and existing `expLog` entries prevent duplicate journal rewards after editing, deleting, or recreating today's journal.
 
 Components:
 

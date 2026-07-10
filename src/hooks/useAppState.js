@@ -1,11 +1,71 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { loadState, saveState, clearState } from "../utils/storage.js";
-import { emptyDay, defaultState, todayStr, computeStats, uid } from "../utils/helpers.js";
+import {
+  emptyDay,
+  defaultState,
+  todayStr,
+  computeStats,
+  uid,
+  dailyBaselineSnapshot,
+} from "../utils/helpers.js";
 import { computeLevel } from "../utils/levels.js";
 import { ACHIEVEMENTS } from "../utils/constants.js";
 import { INITIAL_CHARACTER_STATS } from "../data/character.js";
 
 const DAILY_MAX_ENERGY = 40;
+
+function restoreTodayFromBaseline(prev, date, baseline) {
+  const currentDay = prev.history[date] || emptyDay(date);
+  const empty = emptyDay(date);
+  const baselineDay = baseline.day || {};
+  const nextDay = {
+    ...currentDay,
+    calibration_done: baselineDay.calibration_done ?? empty.calibration_done,
+    morning_plan: baselineDay.morning_plan ?? empty.morning_plan,
+    workout: baselineDay.workout ?? empty.workout,
+    reading: baselineDay.reading ?? empty.reading,
+    checklist_pass: baselineDay.checklist_pass ?? empty.checklist_pass,
+    checklistChecks: { ...(baselineDay.checklistChecks || empty.checklistChecks) },
+    strategy_trade: baselineDay.strategy_trade,
+    successful_wait: baselineDay.successful_wait ?? empty.successful_wait,
+    stopLossMode: baselineDay.stopLossMode ?? empty.stopLossMode,
+  };
+
+  if (baselineDay.identityStatement !== undefined) {
+    nextDay.identityStatement = baselineDay.identityStatement;
+  } else {
+    delete nextDay.identityStatement;
+  }
+
+  if (baselineDay.claimedRewards !== undefined) {
+    nextDay.claimedRewards = { ...baselineDay.claimedRewards };
+  } else {
+    delete nextDay.claimedRewards;
+  }
+
+  return {
+    ...prev,
+    identity: {
+      ...prev.identity,
+      totalExp: baseline.identity?.totalExp ?? prev.identity.totalExp,
+      energy: baseline.identity?.energy ?? prev.identity.energy,
+      maxEnergy: baseline.identity?.maxEnergy ?? prev.identity.maxEnergy,
+      energyDate: baseline.identity?.energyDate ?? date,
+      stats: {
+        ...INITIAL_CHARACTER_STATS,
+        ...(baseline.identity?.stats || prev.identity.stats || {}),
+      },
+    },
+    history: {
+      ...prev.history,
+      [date]: nextDay,
+    },
+    expLog: baseline.expLog ? [...baseline.expLog] : prev.expLog,
+    achievementsUnlocked: baseline.achievementsUnlocked
+      ? [...baseline.achievementsUnlocked]
+      : prev.achievementsUnlocked,
+  };
+}
 
 function migrateIdentity(identity = {}, today = todayStr()) {
   const isToday = identity.energyDate === today;
@@ -40,6 +100,7 @@ export function useAppState(showToast) {
         const migrated = {
           ...parsed,
           identity: migrateIdentity(parsed.identity, today),
+          dailySnapshots: parsed.dailySnapshots || {},
         };
         Object.values(migrated.history || {}).forEach((s) => {
           (s.trades || []).forEach((t) => {
@@ -75,6 +136,13 @@ export function useAppState(showToast) {
       setData((prev) => ({
         ...prev,
         history: { ...prev.history, [today]: emptyDay(today) },
+        dailySnapshots: {
+          ...(prev.dailySnapshots || {}),
+          [today]: dailyBaselineSnapshot(
+            { ...prev, history: { ...prev.history, [today]: emptyDay(today) } },
+            today
+          ),
+        },
       }));
     }
   }, [data, today]);
@@ -194,14 +262,47 @@ export function useAppState(showToast) {
     });
   }, []);
 
+  const resetTodayToBaseline = useCallback(() => {
+    const hasBaseline = !!data?.dailySnapshots?.[today];
+
+    setData((prev) => {
+      const snapshots = prev.dailySnapshots || {};
+      const baseline = snapshots[today];
+
+      if (!baseline) {
+        const next = {
+          ...prev,
+          dailySnapshots: {
+            ...snapshots,
+            [today]: dailyBaselineSnapshot(prev, today),
+          },
+        };
+        saveState(next);
+        return next;
+      }
+
+      const next = restoreTodayFromBaseline(prev, today, baseline);
+      saveState(next);
+      return next;
+    });
+
+    showToast &&
+      showToast(hasBaseline ? "今日已重置為開始狀態" : "已建立今日起始快照", "info");
+  }, [data, showToast, today]);
+
+  const resetAllData = useCallback(() => {
+    const fresh = defaultState();
+    clearState();
+    setData(fresh);
+    saveState(fresh);
+    showToast && showToast("角色已重置", "info");
+  }, [showToast]);
+
   const resetProgress = useCallback(() => {
     if (window.confirm("確定要重置所有進度嗎?此動作無法復原。")) {
-      const fresh = defaultState();
-      setData(fresh);
-      saveState(fresh);
-      showToast && showToast("已重置身份系統", "info");
+      resetAllData();
     }
-  }, [showToast]);
+  }, [resetAllData]);
 
   return {
     loading,
@@ -217,6 +318,8 @@ export function useAppState(showToast) {
     spendEnergy,
     updateDay,
     updateHistoryDay,
+    resetTodayToBaseline,
+    resetAllData,
     resetProgress,
     unlockedAchievement,
     clearUnlockedAchievement: () => setUnlockedAchievement(null),

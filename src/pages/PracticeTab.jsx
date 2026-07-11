@@ -233,7 +233,7 @@ export default function PracticeTab({ ctx }) {
     background: currentStep === step ? "rgba(203,163,95,0.055)" : C.surface,
     opacity: currentStep === step ? 1 : state === "locked" ? 0.56 : state === "completed" ? 0.76 : 1,
   });
-  const calibrationContentClass = `transition-all duration-200 ease-out ${
+  const calibrationContentClass = `transition-all ${calibrationMotionPhase === "exiting" ? "duration-[160ms]" : "duration-[260ms]"} ease-out ${
     calibrationMotionPhase === "exiting"
       ? "-translate-y-1.5 opacity-0"
       : calibrationMotionPhase === "entering"
@@ -287,8 +287,8 @@ export default function PracticeTab({ ctx }) {
     updateDay((d) => ({ ...d, checklistChecks: { ...d.checklistChecks, [id]: !d.checklistChecks[id] } }));
   };
 
-  const returnToHomeTop = () => {
-    setNavigationTarget("home-top");
+  const returnToHomeTop = (target = "home-top") => {
+    setNavigationTarget(target);
     setTab("home");
   };
 
@@ -318,7 +318,7 @@ export default function PracticeTab({ ctx }) {
     updateDay((d) => ({ ...d, morning_plan: true, identityStatement: executionGoal }));
     addReward({ exp: 10, label: "晨間校準", statKey: "focus" });
     showToast("晨間校準完成｜EXP +10｜專注 +1", "reward");
-    returnToHomeTop();
+    returnToHomeTop("home-morning-complete");
   };
 
   const runCalibrationTransition = (nextAction) => {
@@ -338,8 +338,8 @@ export default function PracticeTab({ ctx }) {
       window.setTimeout(() => {
         calibrationTransitionRef.current = false;
         setIsCalibrationTransitioning(false);
-      }, 160);
-    }, 120);
+      }, 260);
+    }, 160);
   };
 
   const confirmCalibrationStep = () => {
@@ -745,7 +745,7 @@ export default function PracticeTab({ ctx }) {
           <div className={`flex flex-col text-center ${calibrationContentClass}`} style={{ minHeight: 330, justifyContent: "center" }}>
             <div className="transition-opacity duration-150 delay-75" style={{ color: C.gold, fontSize: 11, letterSpacing: 1.2, opacity: calibrationMotionPhase === "entered" ? 1 : 0 }}>身份啟動</div>
             <h2 className="transition-opacity duration-200 delay-150" style={{ color: C.text, fontSize: 22, fontWeight: 800, margin: "8px 0 0", opacity: calibrationMotionPhase === "entered" ? 1 : 0 }}>策略執行者已就位</h2>
-            <div style={{ color: "#a84d4d", fontSize: 14, fontWeight: 700, lineHeight: 1.6, marginTop: 20 }}>課題分離：我做我的，市場會給我答案。</div>
+            <div style={{ color: C.textDim, fontSize: 14, fontWeight: 700, lineHeight: 1.6, marginTop: 20 }}>課題分離：我做我的，市場會給我答案。</div>
             <div style={{ color: C.textFaint, fontSize: 11, marginTop: 20 }}>今日唯一任務</div>
             <div style={{ color: C.text, fontSize: 16, fontWeight: 700, marginTop: 5 }}>等待策略允許，再出手。</div>
             {displayedExecutionInstruction && <div style={{ color: C.textFaint, fontSize: 11.5, lineHeight: 1.5, marginTop: 16 }}>今日提醒：{displayedExecutionInstruction.instruction}</div>}

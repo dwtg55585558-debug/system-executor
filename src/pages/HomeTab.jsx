@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   BookOpen,
@@ -34,13 +34,29 @@ export default function HomeTab({ ctx }) {
   const [editingName, setEditingName] = useState(false);
   const [showAttributes, setShowAttributes] = useState(false);
   const [showDataManagement, setShowDataManagement] = useState(false);
+  const [handoffSettled, setHandoffSettled] = useState(true);
+  const [handoffGlow, setHandoffGlow] = useState(false);
+  const handoffTimersRef = useRef([]);
   const quote = QUOTES[new Date().getDate() % QUOTES.length];
 
   useEffect(() => {
-    if (navigationTarget !== "home-top") return;
+    if (navigationTarget !== "home-top" && navigationTarget !== "home-morning-complete") return undefined;
+    const isMorningHandoff = navigationTarget === "home-morning-complete";
     window.scrollTo({ top: 0, behavior: "smooth" });
     setNavigationTarget(null);
+
+    if (isMorningHandoff) {
+      setHandoffSettled(false);
+      setHandoffGlow(true);
+      handoffTimersRef.current = [
+        window.setTimeout(() => setHandoffSettled(true), 16),
+        window.setTimeout(() => setHandoffGlow(false), 600),
+      ];
+    }
+    return undefined;
   }, [navigationTarget, setNavigationTarget]);
+
+  useEffect(() => () => handoffTimersRef.current.forEach(window.clearTimeout), []);
 
   const navigateTo = (tab, target) => {
     setNavigationTarget(target);
@@ -53,7 +69,6 @@ export default function HomeTab({ ctx }) {
   const checklistCompletedToday =
     day.claimedRewards?.checklist === true ||
     data.expLog.some((log) => log.date === ctx.today && log.label === "交易前 Checklist");
-  const hasValidTradePermission = day.morning_plan === true && day.checklist_pass === true;
   const coreStages = [
     { key: "morning", label: "晨間校準", done: !!day.morning_plan },
     { key: "checklist", label: "交易前準備", done: checklistCompletedToday },
@@ -65,37 +80,43 @@ export default function HomeTab({ ctx }) {
   const nextIncompleteIndex = coreStages.findIndex((stage) => !stage.done);
 
   let nextAction;
-  if (!day.morning_plan) {
-    nextAction = { title: "開始晨間校準", description: "先設定今日交易邊界。", cta: "開始校準", tab: "practice", target: "morning-calibration" };
-  } else if (!checklistCompletedToday) {
-    nextAction = { title: "完成交易前 Checklist", description: "確認條件後再進入交易。", cta: "完成 Checklist", tab: "practice", target: "pre-trade-checklist" };
-  } else if (!tradeTrainingDone) {
-    nextAction = hasValidTradePermission
-      ? {
-          title: "完成今日策略執行",
-          description: "記錄符合策略交易，或在沒有機會時完成成功等待。",
-          cta: "前往修煉",
-          tab: "practice",
-          target: "trade-practice",
-        }
-      : {
-          title: "準備下一筆交易",
-          description: "重新確認條件，取得本筆執行許可。",
-          cta: "準備下一筆交易",
-          tab: "practice",
-          target: "pre-trade-checklist",
-        };
-  } else if (!day.journal) {
+  if (day.journal) {
+    nextAction = { eyebrow: "今日結算", title: "今日修煉已完成", description: "今天的策略樣本、紀律與修正提醒已完成記錄。", complete: true };
+  } else if (!day.morning_plan) {
+    nextAction = { eyebrow: "今日起式", title: "開始晨間校準", description: "先設定今日交易邊界。", cta: "開始校準", tab: "practice", target: "morning-calibration" };
+  } else if (day.checklist_pass === true) {
     nextAction = {
-      title: hasValidTradePermission ? "執行許可已取得" : "本輪修煉已完成",
-      description: hasValidTradePermission ? "可繼續記錄下一筆，或停止交易進入復盤。" : "可準備下一筆，或停止交易進入復盤。",
-      cta: hasValidTradePermission ? "記錄下一筆交易" : "準備下一筆交易",
+      eyebrow: "交易許可",
+      title: "本筆交易許可已取得",
+      description: "訊號、風險與止損已確認。",
+      nextLabel: "下一步",
+      nextText: "按照 SOP 執行這筆交易",
+      cta: `執行第 ${day.trades.length + 1} 筆交易`,
       tab: "practice",
-      target: hasValidTradePermission ? "trade-practice" : "pre-trade-checklist",
-      secondary: { cta: "今天停止交易，開始復盤", tab: "journal", target: "decision-journal" },
+      target: "trade-practice",
+      permission: true,
+    };
+  } else if (day.trades.length > 0) {
+    nextAction = {
+      eyebrow: "下一輪準備",
+      title: `第 ${day.trades.length} 筆策略樣本已記錄`,
+      description: "本筆交易許可已重置。下一筆交易前，必須重新完成交易前準備。",
+      cta: "重新取得下一筆許可",
+      tab: "practice",
+      target: "pre-trade-checklist",
+      secondary: { cta: "結束今日交易，開始復盤", tab: "journal", target: "decision-journal" },
     };
   } else {
-    nextAction = { title: "今日修煉已完成", description: "今天的修煉閉環已完成。", complete: true };
+    nextAction = {
+      eyebrow: "身份啟動",
+      title: "策略執行者已就位",
+      description: "今日身份與邊界已確認。",
+      nextLabel: "下一關",
+      nextText: "取得本筆交易許可",
+      cta: "進入交易前準備",
+      tab: "practice",
+      target: "pre-trade-checklist",
+    };
   }
 
   const expPct = lvl.expToNext ? Math.round((lvl.expInto / lvl.expToNext) * 100) : 100;
@@ -229,19 +250,20 @@ export default function HomeTab({ ctx }) {
         </div>
       </Card>
 
-      <Card className="mt-3" style={{ borderColor: nextAction.complete ? C.sage : C.goldDim, background: "linear-gradient(135deg, rgba(19,20,25,0.96), rgba(27,29,36,0.78))" }}>
-        <div style={{ color: C.textFaint, fontFamily: FONT_MONO, fontSize: 10, letterSpacing: 1 }}>下一步行動</div>
+      <Card className="mt-3" style={{ borderColor: nextAction.complete || nextAction.permission ? C.sage : handoffGlow ? C.gold : C.goldDim, background: "linear-gradient(135deg, rgba(19,20,25,0.96), rgba(27,29,36,0.78))", boxShadow: handoffGlow ? "0 0 24px rgba(203,163,95,0.22), inset 0 0 16px rgba(203,163,95,0.06)" : "none", transition: "border-color 600ms ease, box-shadow 600ms ease" }}>
+        <div style={{ color: nextAction.complete || nextAction.permission ? C.sage : C.gold, fontFamily: FONT_MONO, fontSize: 10, letterSpacing: 1, opacity: handoffSettled ? 1 : 0, transition: "opacity 240ms ease" }}>{nextAction.eyebrow}</div>
         <div className="mt-2 flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <div style={{ color: nextAction.complete ? C.sage : C.text, fontFamily: FONT_DISPLAY, fontSize: 18 }}>{nextAction.title}</div>
+            <div style={{ color: nextAction.complete ? C.sage : C.text, fontFamily: FONT_DISPLAY, fontSize: 18, opacity: handoffSettled ? 1 : 0, transition: "opacity 240ms ease 80ms" }}>{nextAction.title}</div>
             <div style={{ color: C.textDim, fontSize: 12.5, lineHeight: 1.5, marginTop: 4 }}>{nextAction.description}</div>
+            {nextAction.nextText && <div style={{ color: C.textDim, fontSize: 12, marginTop: 10, opacity: handoffSettled ? 1 : 0, transition: "opacity 240ms ease 160ms" }}><span style={{ color: C.textFaint }}>{nextAction.nextLabel}：</span>{nextAction.nextText}</div>}
           </div>
           {nextAction.complete ? (
             <div className="shrink-0 flex items-center gap-1.5" style={{ color: C.sage, fontSize: 12, fontWeight: 700 }}>
               <Check size={16} /> 完成
             </div>
           ) : (
-            <div className="shrink-0 flex flex-col gap-2">
+            <div className="shrink-0 flex flex-col gap-2" style={{ opacity: handoffSettled ? 1 : 0, transition: "opacity 240ms ease 160ms" }}>
               <button type="button" onClick={() => navigateTo(nextAction.tab, nextAction.target)} className="rounded-lg px-4 py-2 text-sm font-medium" style={{ minHeight: 40, background: C.goldDim, color: C.text }}>
                 {nextAction.cta}
               </button>

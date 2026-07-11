@@ -236,6 +236,7 @@ State:
 - local `goal`
 - persisted as `day.identityStatement`
 - completion stored as `day.morning_plan`
+- the latest non-blank prior-day Journal `q4` is derived from history, displayed as the previous execution instruction, and adds a local confirmation when present
 
 Reward:
 
@@ -266,6 +267,7 @@ Rules:
 - Every successfully created non-stop-loss-mode trade clears `day.checklist_pass` and `day.checklistChecks`, so the next trade requires a fresh Checklist.
 - Editing an existing trade does not require, consume, or reset Checklist permission.
 - Manual stop-loss-mode trades preserve their existing behavior and do not require, consume, or reset Checklist permission.
+- When a prior-day execution instruction exists, the Checklist displays it and dynamically requires `execution_instruction` for each new normal-mode trade permission. The check is cleared with the existing `checklistChecks` reset after trade creation.
 - Home daily progress uses `day.claimedRewards.checklist`, with today's Checklist EXP log as a compatibility fallback, so consuming execution permission does not reverse daily completion.
 
 Trade form entry:
@@ -439,6 +441,15 @@ Features:
 - Journal editing with field-level edit history.
 - Journal deletion after confirmation.
 - Recent history list.
+- Actionability guidance and a non-blocking quality hint for `q4`.
+
+Execution-instruction lifecycle:
+
+- The latest non-blank `q4` strictly before the current date remains active until a newer instruction replaces it.
+- Today's new or edited `q4` does not take effect until a later date.
+- Morning calibration and every normal-mode pre-trade Checklist display and confirm the active instruction.
+- No instruction snapshot, ID, expiry state, or trade-level compliance field is persisted.
+- Manual `stopLossMode` preserves its existing bypass behavior.
 
 Journal fields:
 

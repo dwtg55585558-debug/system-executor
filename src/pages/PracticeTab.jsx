@@ -11,7 +11,7 @@ import {
   VIOLATION_TYPES,
   EVENING_REFLECTION_REASONS,
 } from "../utils/constants.js";
-import { uid, detectRiskConditions } from "../utils/helpers.js";
+import { uid, detectRiskConditions, getLatestExecutionInstruction } from "../utils/helpers.js";
 
 const ACCOUNT_TYPE_LABEL = {
   exam: "考試帳戶",
@@ -130,15 +130,25 @@ export default function PracticeTab({ ctx }) {
   const mustCompleteProtectionBeforeForm =
     !editingId && (emotionProtectionRequired || (selectedAccountNeedsProtection && !protectionConfirmedForCurrentTrade));
   const allProtectionChecksDone = PROTECTION_ITEMS.every((item) => protectionChecks[item.id]);
+  const latestExecutionInstruction = getLatestExecutionInstruction(data.history, day.date);
 
   const morningCalibrationItems = [
     { id: "process_goal", label: "今天不以賺錢為目標，只以執行系統為目標" },
     { id: "a_plus_only", label: "今天只做 A+ 機會，沒有就等待" },
     { id: "emotional_stop", label: "今天若出現急躁、想補回、想證明自己，立刻停手" },
     { id: "energy_boundary", label: "今天 Energy 歸零後，不再新增交易" },
+    ...(latestExecutionInstruction
+      ? [{ id: "execution_instruction", label: "我今天會依照這條執行指令交易" }]
+      : []),
   ];
+  const activeChecklistItems = latestExecutionInstruction
+    ? [
+        ...CHECKLIST_ITEMS,
+        { id: "execution_instruction", label: "這筆交易沒有違反我的修正指令" },
+      ]
+    : CHECKLIST_ITEMS;
   const allCalibrationChecked = morningCalibrationItems.every((item) => calibrationChecks[item.id] || day.morning_plan);
-  const allChecked = CHECKLIST_ITEMS.every((c) => day.checklistChecks[c.id]);
+  const allChecked = activeChecklistItems.every((c) => day.checklistChecks[c.id]);
   const nextTradeNumber = day.trades.length + 1;
   const hasValidTradePermission = day.morning_plan === true && day.checklist_pass === true;
   const canOpenTrade = day.stopLossMode === true || hasValidTradePermission;
@@ -563,6 +573,18 @@ export default function PracticeTab({ ctx }) {
         >
           {executionGoal}
         </div>
+        {latestExecutionInstruction && (
+          <div
+            className="mb-3 rounded-lg px-3 py-2.5"
+            style={{ background: "rgba(203,163,95,0.055)", border: `1px solid ${C.goldDim}` }}
+          >
+            <div style={{ color: C.gold, fontSize: 10.5, letterSpacing: 0.8 }} className="mb-1">上一輪執行指令</div>
+            <div style={{ color: C.text, fontSize: 13.5, lineHeight: 1.6 }}>{latestExecutionInstruction.instruction}</div>
+            <div style={{ color: C.textFaint, fontSize: 10.5, marginTop: 5 }}>
+              來自 {latestExecutionInstruction.date} 的復盤
+            </div>
+          </div>
+        )}
         <div style={{ display: "grid", gap: 8 }} className="mb-3">
           {morningCalibrationItems.map((item) => {
             const checked = calibrationChecks[item.id] || day.morning_plan;
@@ -667,7 +689,17 @@ export default function PracticeTab({ ctx }) {
             下一筆交易前，重新確認執行條件
           </div>
         )}
-        {CHECKLIST_ITEMS.map((c) => (
+        {latestExecutionInstruction && (
+          <div
+            className="mb-2.5 rounded-lg px-3 py-2.5"
+            style={{ background: "rgba(203,145,72,0.065)", border: "1px solid rgba(203,145,72,0.38)" }}
+          >
+            <div style={{ color: C.gold, fontSize: 10.5, letterSpacing: 0.8 }} className="mb-1">本輪修正指令</div>
+            <div style={{ color: C.text, fontSize: 13.5, lineHeight: 1.6 }}>{latestExecutionInstruction.instruction}</div>
+            <div style={{ color: C.textFaint, fontSize: 11, lineHeight: 1.45, marginTop: 5 }}>確認本筆交易沒有違反這條規則。</div>
+          </div>
+        )}
+        {activeChecklistItems.map((c) => (
           <div
             key={c.id}
             onClick={() => toggleCheck(c.id)}
@@ -683,11 +715,11 @@ export default function PracticeTab({ ctx }) {
               style={{
                 width: 18,
                 height: 18,
-                background: day.checklistChecks[c.id] ? C.sageDim : "transparent",
-                border: `1.5px solid ${day.checklistChecks[c.id] ? C.sage : C.textFaint}`,
+                background: day.checklistChecks[c.id] || day.checklist_pass ? C.sageDim : "transparent",
+                border: `1.5px solid ${day.checklistChecks[c.id] || day.checklist_pass ? C.sage : C.textFaint}`,
               }}
             >
-              {day.checklistChecks[c.id] && <span style={{ color: C.sage, fontSize: 11 }}>✓</span>}
+              {(day.checklistChecks[c.id] || day.checklist_pass) && <span style={{ color: C.sage, fontSize: 11 }}>✓</span>}
             </div>
             <span style={{ fontSize: 13.5 }}>{c.label}</span>
           </div>

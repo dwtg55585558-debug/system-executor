@@ -173,6 +173,36 @@ export function journalGapDays(history) {
   return count;
 }
 
+export function getLatestExecutionInstruction(history, beforeDate) {
+  const isValidDate = (value) => {
+    if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const [year, month, day] = value.split("-").map(Number);
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+    return (
+      parsed.getUTCFullYear() === year &&
+      parsed.getUTCMonth() === month - 1 &&
+      parsed.getUTCDate() === day
+    );
+  };
+
+  if (!history || typeof history !== "object" || !isValidDate(beforeDate)) return null;
+
+  const candidates = Object.entries(history).flatMap(([historyDate, session]) => {
+    const date = isValidDate(session?.date)
+      ? session.date
+      : isValidDate(historyDate)
+        ? historyDate
+        : null;
+    const q4 = session?.journal?.q4;
+
+    if (!date || date >= beforeDate || typeof q4 !== "string" || !q4.trim()) return [];
+    return [{ date, instruction: q4.trim() }];
+  });
+
+  candidates.sort((a, b) => b.date.localeCompare(a.date));
+  return candidates[0] || null;
+}
+
 export function computeStats(data) {
   if (!data)
     return {

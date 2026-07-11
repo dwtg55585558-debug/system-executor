@@ -5,28 +5,28 @@ import { C } from "../styles/theme.js";
 
 const REFLECTION_CONFIG = {
   violation: {
-    question: "違規發生前，哪個決策點本來可以停下？",
-    placeholder: "例如：急著把虧損補回時，我忽略了停手條件",
+    q3Placeholder: "開始想補回時就停止",
+    q4Placeholder: "接受這筆止損",
   },
   deviation: {
-    question: "偏離策略前，你忽略了哪個條件？",
-    placeholder: "例如：我在沒有明確結構突破時仍想提早進場",
+    q3Placeholder: "多等 BOS",
+    q4Placeholder: "沒型態就不進場",
   },
   emotion: {
-    question: "哪個情緒訊號最早提醒你正在偏離？",
-    placeholder: "例如：開始急著證明判斷時，我已經失去耐心",
+    q3Placeholder: "接受止損",
+    q4Placeholder: "不要急",
   },
   waiting: {
-    question: "今天是什麼幫助你守住等待？",
-    placeholder: "例如：完成交易前檢核後，我仍耐心等待確認",
+    q3Placeholder: "沒有型態也是完成策略",
+    q4Placeholder: "沒型態就不進場",
   },
   noTrade: {
-    question: "下次看盤前，你要先確認什麼？",
-    placeholder: "例如：先確認今天是否有符合策略的機會",
+    q3Placeholder: "更有耐心",
+    q4Placeholder: "照 Checklist 執行",
   },
   faithful: {
-    question: "今天哪個行為最值得保留？",
-    placeholder: "例如：完成交易前檢核後，我仍等待訊號確認",
+    q3Placeholder: "照 SOP 執行",
+    q4Placeholder: "多等 BOS",
   },
 };
 
@@ -35,21 +35,21 @@ function getExecutionSummary(day, counts) {
 
   if (totalTrades === 0 && day.successful_wait === true) {
     return violationCount === 0
-      ? "今日未進入市場，完成成功等待。今日無違規。"
-      : `今日未進入市場，完成成功等待，另有 ${violationCount} 次違規紀錄。`;
+      ? "今日沒有符合策略的機會，完成等待，無違規。"
+      : `今日沒有符合策略的機會，完成等待，另有 ${violationCount} 次違規紀錄。`;
   }
 
   if (totalTrades === 0 && day.eveningReflection?.reason) {
     const summaries = {
-      no_setup: "今日沒有符合策略的機會，未進入市場。",
-      did_not_watch_market: "今日未看盤。",
-      rest_day: "今日為休息日。",
-      fear_based_avoidance: "今日未交易；紀錄顯示受到恐懼影響。",
+      no_setup: "今日沒有符合策略的機會，完成等待。",
+      did_not_watch_market: "今日沒有交易紀錄，可以留下今天想記住的內容。",
+      rest_day: "今日為休息日，可以留下今天想記住的內容。",
+      fear_based_avoidance: "今日沒有交易紀錄，可以留下今天想記住的內容。",
     };
-    return summaries[day.eveningReflection.reason] || "今日無交易紀錄。";
+    return summaries[day.eveningReflection.reason] || "今日沒有交易紀錄，可以留下今天想記住的內容。";
   }
 
-  if (totalTrades === 0) return "今日無交易紀錄。";
+  if (totalTrades === 0) return "今日沒有交易紀錄，可以留下今天想記住的內容。";
 
   if (violationCount > 0) {
     return `今日共 ${totalTrades} 筆交易，其中 ${followedTrades} 筆符合策略，發生 ${violationCount} 次違規。`;
@@ -64,7 +64,7 @@ function getExecutionSummary(day, counts) {
     return `今日 ${totalTrades} 筆交易皆符合策略，其中 ${emotionAffectedTrades} 筆受到情緒影響，無違規。`;
   }
 
-  return `今日 ${totalTrades} 筆交易皆符合策略，未受情緒影響，無違規。`;
+  return `今日完成 ${totalTrades} 筆策略交易，已留下交易紀錄，無違規。`;
 }
 
 function getReflectionConfig({ totalTrades, deviatedTrades, emotionAffectedTrades, violationCount }, successfulWait) {
@@ -148,10 +148,9 @@ export default function JournalTab({ ctx }) {
   const submit = () => {
     if (existing && !editingJournal) return;
     if (!q3.trim() || !q4.trim()) {
-      showToast("請完成核心反思與下一次執行指令", "info");
+      showToast("請完成今日修煉領悟與下一輪提醒", "info");
       return;
     }
-
     const systemFaithful = violationCount === 0 && deviatedTrades === 0;
     const derivedEmotion = emotionAffectedTrades > 0 ? existing?.emotion || "未記錄" : "平靜";
     const behaviorTrustworthy = violationCount === 0 && deviatedTrades === 0 && emotionAffectedTrades === 0;
@@ -206,7 +205,7 @@ export default function JournalTab({ ctx }) {
         決策復盤
       </div>
       <div style={{ fontSize: 11.5, color: C.textFaint }} className="mb-3">
-        {existing ? "復盤已完成，可隨時回看今日執行" : "把今日行為，化為下一次能直接執行的指令"}
+        {existing ? "復盤已完成，可隨時回看今日修煉" : "記錄今日修煉，留下下一輪提醒"}
       </div>
 
       <div id="decision-journal" style={{ scrollMarginTop: "16px" }}>
@@ -238,21 +237,21 @@ export default function JournalTab({ ctx }) {
             </Card>
 
             <Card className="mb-3" style={{ borderColor: C.hair }}>
-              <div style={{ fontSize: 10.5, color: C.gold, letterSpacing: 1 }} className="mb-2">今日執行結果</div>
+              <div style={{ fontSize: 10.5, color: C.gold, letterSpacing: 1 }} className="mb-2">今日修煉結果</div>
               <div style={{ fontSize: 13.5, color: C.textDim, lineHeight: 1.65 }}>{executionSummary}</div>
             </Card>
 
             <Card className="mb-3" style={{ borderColor: C.hair }}>
-              <div style={{ fontSize: 10.5, color: C.gold, letterSpacing: 1 }} className="mb-2">核心反思</div>
+              <div style={{ fontSize: 10.5, color: C.gold, letterSpacing: 1 }} className="mb-2">今日修煉領悟</div>
               <div style={{ fontSize: 13.5, color: existing.q3 ? C.textDim : C.textFaint, lineHeight: 1.65 }}>
-                {existing.q3 || "尚未留下核心反思"}
+                {existing.q3 || "尚未留下修煉領悟"}
               </div>
             </Card>
 
             <Card className="mb-2" style={{ borderColor: "rgba(203,163,95,0.52)", background: "rgba(203,163,95,0.05)" }}>
-              <div style={{ fontSize: 10.5, color: C.gold, letterSpacing: 1 }} className="mb-2">下一次執行</div>
+              <div style={{ fontSize: 10.5, color: C.gold, letterSpacing: 1 }} className="mb-2">下一輪提醒</div>
               <div style={{ fontSize: 15, color: existing.q4 ? C.text : C.textFaint, lineHeight: 1.7 }}>
-                {existing.q4 || "尚未設定下一次執行指令"}
+                {existing.q4 || "尚未留下下一輪提醒"}
               </div>
             </Card>
 
@@ -265,46 +264,58 @@ export default function JournalTab({ ctx }) {
         ) : (
           <>
             <Card className="mb-3" style={{ borderColor: C.hair }}>
-              <div style={{ fontSize: 10.5, color: C.gold, letterSpacing: 1 }} className="mb-2">今日執行摘要</div>
+              <div style={{ fontSize: 10.5, color: C.gold, letterSpacing: 1 }} className="mb-2">今日修煉結果</div>
               <div style={{ fontSize: 13.5, color: C.textDim, lineHeight: 1.65 }}>{executionSummary}</div>
             </Card>
 
             <Card className="mb-3" style={{ borderColor: C.hair }}>
-              <div style={{ fontSize: 10.5, color: C.gold, letterSpacing: 1 }} className="mb-2">核心反思</div>
+              <div style={{ fontSize: 10.5, color: C.gold, letterSpacing: 1 }} className="mb-2">今日修煉領悟</div>
               <label htmlFor="journal-reflection" style={{ display: "block", fontSize: 13.5, color: C.text, lineHeight: 1.55 }} className="mb-2">
-                {reflectionConfig.question}
+                今天學到或想記住什麼？
               </label>
+              <div style={{ fontSize: 11.5, color: C.textFaint, lineHeight: 1.55 }} className="mb-2">
+                可以只寫幾個字，使用你最容易記住的方式。
+              </div>
               <input
                 id="journal-reflection"
                 value={q3}
                 onChange={(event) => setQ3(event.target.value)}
                 maxLength={60}
-                placeholder={reflectionConfig.placeholder}
+                placeholder={reflectionConfig.q3Placeholder}
                 className="w-full rounded-lg px-3 py-2 text-sm outline-none"
                 style={{ background: C.raised, color: C.text, border: `1px solid ${C.hair}` }}
               />
             </Card>
 
             <Card className="mb-4" style={{ borderColor: "rgba(203,163,95,0.52)", background: "rgba(203,163,95,0.05)" }}>
-              <label htmlFor="journal-command" style={{ display: "block", fontSize: 14, color: C.gold }} className="mb-1">
-                刻下下一次執行指令
+              <div style={{ fontSize: 10.5, color: C.gold, letterSpacing: 1 }} className="mb-2">下一輪提醒</div>
+              <label htmlFor="journal-command" style={{ display: "block", fontSize: 13.5, color: C.text, lineHeight: 1.55 }} className="mb-1">
+                下一次交易前，想提醒自己什麼？
               </label>
-              <div style={{ fontSize: 11.5, color: C.textFaint }} className="mb-2">寫成進場前能直接照做的一句話。</div>
+              <div style={{ fontSize: 11.5, color: C.textFaint, lineHeight: 1.55 }} className="mb-2">
+                這不是考試，寫下你明天看得懂的提醒即可。
+              </div>
               <input
                 id="journal-command"
                 value={q4}
                 onChange={(event) => setQ4(event.target.value)}
                 maxLength={60}
-                placeholder={violationCount > 0 || emotionAffectedTrades > 0
-                  ? "例如：察覺想補回時，立即離開畫面十分鐘"
-                  : "例如：沒有明確結構突破，就不進場"}
+                placeholder={reflectionConfig.q4Placeholder}
                 className="w-full rounded-lg px-3 py-2.5 outline-none"
                 style={{ background: C.raised, color: C.text, border: "1px solid rgba(203,163,95,0.42)", fontSize: 14 }}
               />
             </Card>
 
+            <div style={{ color: C.textFaint, fontSize: 11, textAlign: "center" }} className="mb-2">
+              完成復盤，記錄今天的修煉。
+            </div>
             <div className={existing ? "grid grid-cols-2 gap-2" : ""}>
-              <button onClick={submit} className="w-full rounded-lg py-2.5 text-sm font-medium" style={{ background: C.violetDim, color: C.text }}>
+              <button
+                type="button"
+                onClick={submit}
+                className="w-full rounded-lg py-2.5 text-sm font-medium"
+                style={{ background: C.violetDim, color: C.text }}
+              >
                 {existing ? "儲存修改" : "完成今日復盤"}
               </button>
               {existing && editingJournal && (

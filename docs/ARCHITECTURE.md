@@ -174,6 +174,8 @@ This page mixes view layout, form state, validation, reward logic, penalty logic
 
 Morning calibration is completed once per day and is the entry gate for all normal daily trading activity. The pre-trade Checklist is an execution-permission flow that is locked until morning calibration is complete and must then be completed before every normal-mode new trade. A normal trade requires both `day.morning_plan === true` and `day.checklist_pass === true`. `day.checklist_pass` stores whether permission for the next trade is currently valid, while `day.claimedRewards.checklist` stores that the Checklist has been completed at least once today and its daily reward has been claimed. The first completion each day grants the existing +20 EXP and discipline +1 reward; later completions only renew execution permission. Every successfully created non-stop-loss-mode trade clears `checklist_pass` and `checklistChecks`. Editing an existing trade and recording a trade in manual stop-loss mode remain exceptions and do not require or clear this permission.
 
+The latest non-blank Journal `q4` dated before the current day is derived directly from history and acts as the active execution instruction. It remains active until a newer prior-day `q4` replaces it, appears in morning calibration, and adds a dynamic confirmation to every pre-trade Checklist. Today's `q4` never takes effect on the same day. The instruction and confirmations add no persisted schema or trade-level compliance field. Manual `stopLossMode` remains an explicit exception and bypasses these normal-mode confirmations.
+
 The new-trade form is collapsed by default and is opened deliberately for each trade through the `Execute trade N` entry, where N is today's trade count plus one. Checklist completion unlocks this entry but does not open the form. The selected account remains available while collapsed so account protection can be evaluated before the form opens. When protection is active, opening a trade shows the existing protection confirmation first and reveals the form only after confirmation. Decision Risk Check remains a post-submit check. Editing opens the populated form directly, while successful creation, successful editing, and cancellation collapse it again. This open/collapsed state is local UI state and is not persisted.
 
 Trade logging rewards honest recordkeeping rather than profitability or strategy quality. In normal mode, the first new trade record of a day grants +40 EXP and execution +1, the second through fourth new trade records grant +10 EXP each, and later records grant no trade-record reward. `claimedRewards.trade_record_rewards` stores the rewarded count, total rewarded EXP, and whether execution has already been granted so editing or deleting trades cannot re-award the same day. `followed_checklist` is a required yes/no quality mark, not an EXP source.
@@ -191,6 +193,7 @@ Journal renders the five-question daily journal and today's trading summary. It 
 - journal edit-history diffing
 - journal EXP award and claimed-reward guard
 - recent history list construction
+- non-blocking guidance that helps make `q4` objectively actionable before entry
 
 ### `SystemTab`
 

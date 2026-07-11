@@ -110,10 +110,7 @@ export default function App() {
         <DayDetailModal
           date={reviewDate}
           session={data.history[reviewDate]}
-          expLog={data.expLog}
-          integrityLog={data.integrityLog}
           onClose={() => setReviewDate(null)}
-          onSaveMentor={(result) => updateHistoryDay(reviewDate, (d) => ({ ...d, aiMentor: result }))}
         />
       )}
     </div>

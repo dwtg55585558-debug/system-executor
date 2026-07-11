@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Card from "../components/Card.jsx";
 import SectionLabel from "../components/SectionLabel.jsx";
+import AIMentorPanel from "../components/AIMentorPanel.jsx";
 import { C, FONT_MONO } from "../styles/theme.js";
 import { ACHIEVEMENTS, TITLE_BANDS } from "../utils/constants.js";
 import { Award, Lock, Shield, Sparkles, Trophy } from "lucide-react";
@@ -143,6 +144,9 @@ export default function SystemTab({ ctx }) {
   const [showAllAchievements, setShowAllAchievements] = useState(false);
   const [activeAchievementCategory, setActiveAchievementCategory] = useState("交易修煉");
   const [showRewards, setShowRewards] = useState(false);
+  const historyDates = Object.keys(ctx.data.history).sort().reverse();
+  const [mentorDate, setMentorDate] = useState(ctx.today);
+  const mentorSession = ctx.data.history[mentorDate];
   const sessions = Object.values(ctx.data.history);
   const totalTrades = sessions.reduce((sum, session) => sum + session.trades.length, 0);
   const totalFollowedTrades = sessions.reduce(
@@ -273,6 +277,29 @@ export default function SystemTab({ ctx }) {
         <StatRow label="累積成功等待" value={totalSuccessfulWaits} />
         <StatRow label="累積日誌天數" value={totalJournalDays} />
         <StatRow label="連續無違規天數" value={ctx.stats.noViolationStreak} last />
+      </Card>
+
+      <SectionLabel>AI 導師設定</SectionLabel>
+      <Card>
+        <div style={{ color: C.textDim, fontSize: 12, lineHeight: 1.55, marginBottom: 10 }}>
+          在此管理 API Key，並為指定日期產生或重跑紀律分析。
+        </div>
+        <select
+          value={mentorDate}
+          onChange={(event) => setMentorDate(event.target.value)}
+          className="w-full rounded-lg px-3 py-2 mb-3 text-sm outline-none"
+          style={{ background: C.raised, color: C.text, border: `1px solid ${C.hair}` }}
+          aria-label="AI 導師分析日期"
+        >
+          {historyDates.map((date) => <option key={date} value={date}>{date}</option>)}
+        </select>
+        {mentorSession && (
+          <AIMentorPanel
+            date={mentorDate}
+            session={mentorSession}
+            onSave={(result) => ctx.updateHistoryDay(mentorDate, (day) => ({ ...day, aiMentor: result }))}
+          />
+        )}
       </Card>
 
       <button

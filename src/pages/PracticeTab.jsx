@@ -4,6 +4,7 @@ import SectionLabel from "../components/SectionLabel.jsx";
 import ToggleRow from "../components/ToggleRow.jsx";
 import ConfirmModal from "../components/ConfirmModal.jsx";
 import SystemCheckModal from "../components/SystemCheckModal.jsx";
+import executorApprentice from "../assets/characters/executor-apprentice.png";
 import { C } from "../styles/theme.js";
 import {
   CHECKLIST_ITEMS,
@@ -36,6 +37,39 @@ const PROTECTION_ITEMS = [
   { id: "not_recovery_trade", label: "這筆不是為了把今天轉正" },
   { id: "accept_loss_day", label: "我接受今天可以是虧損日" },
 ];
+
+const calibrationOaths = [
+  {
+    id: "process_goal",
+    title: "身份誓約",
+    text: "我是策略執行者，只按照訊號出手；沒有訊號就等待，違反策略就是主動送命。",
+    action: "確認身份",
+  },
+  {
+    id: "a_plus_only",
+    title: "未知誓約",
+    text: "我不知道這一刀會不會命中，但我會相信策略，直到止損或止盈給出答案。",
+    action: "接受未知",
+  },
+  {
+    id: "emotional_stop",
+    title: "風險誓約",
+    text: "今天帳戶有可能歸零，但我仍然按照策略交易，不為了保護帳戶而破壞系統。",
+    action: "接受風險",
+  },
+  {
+    id: "energy_boundary",
+    title: "執行誓約",
+    text: "我是主角，策略是刀，市場是怪；我只照 SOP 出刀，不追著怪亂砍。",
+    action: "握緊策略",
+  },
+];
+
+const formatReminderDate = (date) => {
+  if (typeof date !== "string") return "";
+  const match = date.match(/^\d{4}-(\d{2})-(\d{2})$/);
+  return match ? `${match[1]}-${match[2]}` : date;
+};
 
 const EMPTY_TRADE_RECORD_REWARDS = { count: 0, exp: 0, executionGranted: false };
 
@@ -95,9 +129,10 @@ const getAccountProtectionStates = (trades) => {
 };
 
 export default function PracticeTab({ ctx }) {
-  const { day, data, updateDay, addExp, addReward, adjustIntegrity, spendEnergy, showToast, setTab, setBossCard, navigationTarget, setNavigationTarget } = ctx;
+  const { day, data, lvl, updateDay, addExp, addReward, adjustIntegrity, spendEnergy, showToast, setTab, setBossCard, navigationTarget, setNavigationTarget } = ctx;
   const latestDayRef = useRef(day);
   latestDayRef.current = day;
+  const calibrationTransitionRef = useRef(false);
   const [isTradeFormOpen, setIsTradeFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [accountType, setAccountType] = useState("exam");
@@ -116,6 +151,10 @@ export default function PracticeTab({ ctx }) {
   const [protectionChecks, setProtectionChecks] = useState({});
   const [emotionProtectionRequired, setEmotionProtectionRequired] = useState(false);
   const [calibrationChecks, setCalibrationChecks] = useState({});
+  const [calibrationStage, setCalibrationStage] = useState("intro");
+  const [calibrationStep, setCalibrationStep] = useState(0);
+  const [isCalibrationTransitioning, setIsCalibrationTransitioning] = useState(false);
+  const [calibrationMotionPhase, setCalibrationMotionPhase] = useState("entered");
   const [showMorningDetails, setShowMorningDetails] = useState(!day.morning_plan);
   const [showChecklistDetails, setShowChecklistDetails] = useState(
     day.morning_plan === true && day.checklist_pass !== true
@@ -131,17 +170,24 @@ export default function PracticeTab({ ctx }) {
     !editingId && (emotionProtectionRequired || (selectedAccountNeedsProtection && !protectionConfirmedForCurrentTrade));
   const allProtectionChecksDone = PROTECTION_ITEMS.every((item) => protectionChecks[item.id]);
   const latestExecutionInstruction = getLatestExecutionInstruction(data.history, day.date);
+  const previewReminderEnabled =
+    import.meta.env.DEV &&
+    new URLSearchParams(window.location.search).get("previewMorningReminder") === "1";
+  const displayedExecutionInstruction =
+    latestExecutionInstruction ||
+    (previewReminderEnabled
+      ? { date: "2026-07-10", instruction: "未見確認，不先行" }
+      : null);
+  const identityDisplayName = data.identity.name?.trim() || "執行者";
+  const shouldDisplayIdentityName = !/^\d+$/.test(identityDisplayName);
 
   const morningCalibrationItems = [
-    { id: "process_goal", label: "今天不以賺錢為目標，只以執行系統為目標" },
-    { id: "a_plus_only", label: "今天只做 A+ 機會，沒有就等待" },
-    { id: "emotional_stop", label: "今天若出現急躁、想補回、想證明自己，立刻停手" },
-    { id: "energy_boundary", label: "今天 Energy 歸零後，不再新增交易" },
-    ...(latestExecutionInstruction
-      ? [{ id: "execution_instruction", label: "我今天會依照這條執行指令交易" }]
+    ...calibrationOaths,
+    ...(displayedExecutionInstruction
+      ? [{ id: "execution_instruction" }]
       : []),
   ];
-  const activeChecklistItems = latestExecutionInstruction
+  const activeChecklistItems = displayedExecutionInstruction
     ? [
         ...CHECKLIST_ITEMS,
         { id: "execution_instruction", label: "這筆交易沒有違反我的修正指令" },
@@ -187,20 +233,24 @@ export default function PracticeTab({ ctx }) {
     background: currentStep === step ? "rgba(203,163,95,0.055)" : C.surface,
     opacity: currentStep === step ? 1 : state === "locked" ? 0.56 : state === "completed" ? 0.76 : 1,
   });
-  const CurrentStepTag = ({ step }) =>
-    currentStep === step ? (
-      <div className="mb-2">
-        <span
-          className="inline-flex rounded-full px-2 py-0.5"
-          style={{ fontSize: 10.5, color: C.gold, background: C.goldDim, letterSpacing: 0.5 }}
-        >
-          目前步驟
-        </span>
-      </div>
-    ) : null;
+  const calibrationContentClass = `transition-all duration-200 ease-out ${
+    calibrationMotionPhase === "exiting"
+      ? "-translate-y-1.5 opacity-0"
+      : calibrationMotionPhase === "entering"
+        ? "translate-y-1.5 opacity-0"
+        : "translate-y-0 opacity-100"
+  }`;
+  const calibrationButtonClass =
+    "w-full rounded-lg py-2.5 text-sm font-semibold transition duration-[120ms] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-not-allowed disabled:opacity-60";
 
   useEffect(() => {
     setShowMorningDetails(day.morning_plan !== true);
+    setCalibrationStage("intro");
+    setCalibrationStep(0);
+    setCalibrationChecks({});
+    calibrationTransitionRef.current = false;
+    setIsCalibrationTransitioning(false);
+    setCalibrationMotionPhase("entered");
   }, [day.date, day.morning_plan]);
 
   useEffect(() => {
@@ -264,16 +314,66 @@ export default function PracticeTab({ ctx }) {
   };
 
   const completeMorningPlan = () => {
-    if (day.morning_plan || !allCalibrationChecked) return;
+    if (day.morning_plan || !allCalibrationChecked || isCalibrationTransitioning) return;
     updateDay((d) => ({ ...d, morning_plan: true, identityStatement: executionGoal }));
     addReward({ exp: 10, label: "晨間校準", statKey: "focus" });
     showToast("晨間校準完成｜EXP +10｜專注 +1", "reward");
     returnToHomeTop();
   };
 
-  const toggleCalibrationCheck = (id) => {
-    if (day.morning_plan) return;
-    setCalibrationChecks((checks) => ({ ...checks, [id]: !checks[id] }));
+  const runCalibrationTransition = (nextAction) => {
+    if (calibrationTransitionRef.current) return;
+
+    calibrationTransitionRef.current = true;
+    setIsCalibrationTransitioning(true);
+    setCalibrationMotionPhase("exiting");
+
+    window.setTimeout(() => {
+      nextAction();
+      setCalibrationMotionPhase("entering");
+
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => setCalibrationMotionPhase("entered"));
+      });
+      window.setTimeout(() => {
+        calibrationTransitionRef.current = false;
+        setIsCalibrationTransitioning(false);
+      }, 160);
+    }, 120);
+  };
+
+  const confirmCalibrationStep = () => {
+    const currentOath = calibrationOaths[calibrationStep];
+    if (!currentOath || day.morning_plan || isCalibrationTransitioning) return;
+
+    runCalibrationTransition(() => {
+      setCalibrationChecks((checks) => ({ ...checks, [currentOath.id]: true }));
+      if (calibrationStep < calibrationOaths.length - 1) {
+        setCalibrationStep((step) => step + 1);
+      } else if (displayedExecutionInstruction) {
+        setCalibrationStep(calibrationOaths.length);
+      } else {
+        setCalibrationStage("ready");
+      }
+    });
+  };
+
+  const confirmExecutionInstruction = () => {
+    if (!displayedExecutionInstruction || day.morning_plan || isCalibrationTransitioning) return;
+    runCalibrationTransition(() => {
+      setCalibrationChecks((checks) => ({ ...checks, execution_instruction: true }));
+      setCalibrationStage("ready");
+    });
+  };
+
+  const returnCalibrationStep = () => {
+    runCalibrationTransition(() => {
+      if (calibrationStep > 0) {
+        setCalibrationStep((step) => step - 1);
+      } else {
+        setCalibrationStage("intro");
+      }
+    });
   };
 
   const resetForm = () => {
@@ -537,8 +637,16 @@ export default function PracticeTab({ ctx }) {
 
       <div id="morning-calibration" style={{ scrollMarginTop: "16px" }}>
         <SectionLabel>晨間校準</SectionLabel>
-        <Card style={stepCardStyle("morning", day.morning_plan === true ? "completed" : "pending")}>
-        <CurrentStepTag step="morning" />
+        <Card
+          style={{
+            ...stepCardStyle("morning", day.morning_plan === true ? "completed" : "pending"),
+            boxShadow:
+              calibrationStage === "ready" && calibrationMotionPhase !== "entered"
+                ? "0 0 20px rgba(203,163,95,0.18)"
+                : "none",
+            transition: "border-color 240ms ease, box-shadow 240ms ease",
+          }}
+        >
         {day.morning_plan === true && !showMorningDetails ? (
           <button
             type="button"
@@ -549,102 +657,109 @@ export default function PracticeTab({ ctx }) {
             <span className="flex items-center gap-2.5">
               <span style={{ color: C.sage, fontSize: 16 }}>✓</span>
               <span>
-                <span style={{ display: "block", color: C.text, fontSize: 13, fontWeight: 700 }}>晨間校準完成</span>
+                <span style={{ display: "block", color: C.text, fontSize: 13, fontWeight: 700 }}>策略執行者已就位</span>
                 <span style={{ display: "block", color: C.textFaint, fontSize: 11.5, marginTop: 2 }}>
-                  今日身份｜{day.identityStatement || executionGoal}
+                  今日身份與邊界已確認。
                 </span>
               </span>
             </span>
             <span style={{ color: C.textFaint, fontSize: 11 }}>查看承諾</span>
           </button>
         ) : (
-        <>
-        <div style={{ fontSize: 12, color: C.textFaint }} className="mb-1.5">
-          今日唯一執行目標
-        </div>
-        <div
-          className="mb-3 rounded-lg px-3 py-2 text-sm"
-          style={{
-            background: "rgba(203,163,95,0.08)",
-            color: C.text,
-            border: `1px solid rgba(203,163,95,0.22)`,
-            fontWeight: 700,
-          }}
-        >
-          {executionGoal}
-        </div>
-        {latestExecutionInstruction && (
-          <div
-            className="mb-3 rounded-lg px-3 py-2.5"
-            style={{ background: "rgba(203,163,95,0.055)", border: `1px solid ${C.goldDim}` }}
-          >
-            <div style={{ color: C.gold, fontSize: 10.5, letterSpacing: 0.8 }} className="mb-1">上一輪執行指令</div>
-            <div style={{ color: C.text, fontSize: 13.5, lineHeight: 1.6 }}>{latestExecutionInstruction.instruction}</div>
-            <div style={{ color: C.textFaint, fontSize: 10.5, marginTop: 5 }}>
-              來自 {latestExecutionInstruction.date} 的復盤
+        day.morning_plan === true ? (
+          <>
+            <div className="mb-3 text-center">
+              <div style={{ color: C.gold, fontSize: 11, letterSpacing: 1.2 }}>身份啟動完成</div>
+              <div style={{ color: C.text, fontSize: 20, fontWeight: 800, marginTop: 5 }}>策略執行者已就位</div>
+              <div style={{ color: C.textFaint, fontSize: 12, marginTop: 5 }}>今日身份與邊界已確認。</div>
             </div>
+            <div className="rounded-lg px-3 py-2.5" style={{ background: "rgba(10,11,14,0.42)", border: `1px solid ${C.hair}` }}>
+              {calibrationOaths.map((oath) => (
+                <div key={oath.id} className="flex items-center justify-between py-1.5" style={{ color: C.textDim, fontSize: 12.5 }}>
+                  <span>{oath.title}</span><span style={{ color: C.sage }}>已確認</span>
+                </div>
+              ))}
+              {displayedExecutionInstruction && (
+                <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${C.hair}` }}>
+                  <div style={{ color: C.textDim, fontSize: 12.5, lineHeight: 1.55 }}>{displayedExecutionInstruction.instruction}</div>
+                  <div style={{ color: C.sage, fontSize: 11, marginTop: 4 }}>已看見上一輪提醒</div>
+                </div>
+              )}
+            </div>
+            <button type="button" onClick={() => setShowMorningDetails(false)} className="w-full pt-3 text-xs" style={{ color: C.textFaint }}>
+              收合承諾
+            </button>
+          </>
+        ) : calibrationStage === "intro" ? (
+          <div className={`flex flex-col items-center text-center ${calibrationContentClass}`} style={{ minHeight: 330, justifyContent: "center" }}>
+            <div style={{ color: C.gold, fontSize: 11, letterSpacing: 1.5 }}>今日修煉</div>
+            <img src={executorApprentice} alt="策略執行者" style={{ width: 112, height: 132, objectFit: "contain", margin: "6px auto" }} />
+            <h2 style={{ color: C.text, fontSize: 24, fontWeight: 800, margin: 0 }}>策略執行者</h2>
+            {shouldDisplayIdentityName && <div style={{ color: C.gold, fontSize: 11.5, marginTop: 4 }}>{identityDisplayName}</div>}
+            {Number.isFinite(lvl?.level) && <div style={{ color: C.textFaint, fontSize: 11, marginTop: 3 }}>LV. {lvl.level}</div>}
+            <div style={{ color: C.text, fontSize: 15, marginTop: 10 }}>今天，我不追結果，只執行策略。</div>
+            <div style={{ color: C.textFaint, fontSize: 12.5, marginTop: 6 }}>完成校準，進入今日修煉狀態。</div>
+            <button
+              type="button"
+              disabled={isCalibrationTransitioning}
+              onClick={() => runCalibrationTransition(() => { setCalibrationStage("oath"); setCalibrationStep(0); })}
+              className={`mt-5 ${calibrationButtonClass}`}
+              style={{ background: C.goldDim, color: C.text, border: "1px solid rgba(203,163,95,0.42)" }}
+            >
+              開始身份校準
+            </button>
           </div>
-        )}
-        <div style={{ display: "grid", gap: 8 }} className="mb-3">
-          {morningCalibrationItems.map((item) => {
-            const checked = calibrationChecks[item.id] || day.morning_plan;
-
-            return (
-              <button
-                key={item.id}
-                type="button"
-                disabled={day.morning_plan}
-                onClick={() => toggleCalibrationCheck(item.id)}
-                className="flex items-start gap-2.5 rounded-lg p-2 text-left"
-                style={{
-                  minHeight: 40,
-                  background: "rgba(10,11,14,0.42)",
-                  border: `1px solid ${checked ? "rgba(107,154,126,0.5)" : C.hair}`,
-                  color: checked ? C.text : C.textDim,
-                  cursor: day.morning_plan ? "default" : "pointer",
-                }}
-              >
-                <span
-                  className="flex items-center justify-center shrink-0"
-                  style={{
-                    width: 18,
-                    height: 18,
-                    borderRadius: 5,
-                    background: "transparent",
-                    border: `1.5px solid ${checked ? C.sage : C.textFaint}`,
-                    color: C.sage,
-                    fontSize: 11,
-                    lineHeight: 1,
-                  }}
-                >
-                  {checked && "✓"}
-                </span>
-                <span style={{ fontSize: 12.5, lineHeight: 1.45 }}>{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
-        {day.morning_plan !== true && (
-          <button
-            disabled={!allCalibrationChecked}
-            onClick={completeMorningPlan}
-            className="w-full rounded-lg py-2 text-sm font-medium"
-            style={{ background: allCalibrationChecked ? C.goldDim : C.raised, color: allCalibrationChecked ? C.text : C.textFaint }}
-          >
-            完成晨間校準
-          </button>
-        )}
-        {day.morning_plan === true && (
-          <button
-            type="button"
-            onClick={() => setShowMorningDetails(false)}
-            className="w-full pt-2 text-xs"
-            style={{ color: C.textFaint }}
-          >
-            收合承諾
-          </button>
-        )}
-        </>
+        ) : calibrationStage === "oath" ? (
+          <div className={`flex flex-col ${calibrationContentClass}`} style={{ minHeight: 330, justifyContent: "center" }}>
+            {calibrationStep < calibrationOaths.length ? (() => {
+              const oath = calibrationOaths[calibrationStep];
+              return (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="rounded-full px-2 py-1" style={{ color: C.gold, background: C.goldDim, fontSize: 10.5, letterSpacing: 0.8 }}>{oath.title}</span>
+                    <span style={{ color: C.textFaint, fontSize: 11 }}>{calibrationStep + 1} / 4</span>
+                  </div>
+                  <div style={{ color: C.text, fontSize: 19, fontWeight: 700, lineHeight: 1.75, margin: "22px 2px" }}>{oath.text}</div>
+                  <button type="button" disabled={isCalibrationTransitioning} onClick={confirmCalibrationStep} className={calibrationButtonClass} style={{ background: C.goldDim, color: C.text, border: "1px solid rgba(203,163,95,0.42)" }}>
+                    {oath.action}
+                  </button>
+                </>
+              );
+            })() : (
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="rounded-full px-2 py-1" style={{ color: C.gold, background: C.goldDim, fontSize: 10.5, letterSpacing: 0.8 }}>上一輪留下的提醒</span>
+                  <span style={{ color: C.textFaint, fontSize: 11 }}>提醒確認</span>
+                </div>
+                <div style={{ color: C.text, fontSize: 19, fontWeight: 700, lineHeight: 1.7, marginTop: 22 }}>{displayedExecutionInstruction.instruction}</div>
+                <div style={{ color: C.textFaint, fontSize: 11, marginTop: 8 }}>記得 {formatReminderDate(displayedExecutionInstruction.date)} 的復盤提醒</div>
+                <div style={{ color: C.textDim, fontSize: 12.5, margin: "18px 0" }}>今天交易前，再看一次這句話。</div>
+                <button type="button" disabled={isCalibrationTransitioning} onClick={confirmExecutionInstruction} className={calibrationButtonClass} style={{ background: C.goldDim, color: C.text, border: "1px solid rgba(203,163,95,0.42)" }}>
+                  我已看見這個提醒
+                </button>
+              </>
+            )}
+            <button type="button" disabled={isCalibrationTransitioning} onClick={returnCalibrationStep} className="w-full pt-4 text-xs transition duration-[120ms] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 disabled:opacity-60" style={{ color: C.textFaint }}>返回上一誓約</button>
+          </div>
+        ) : (
+          <div className={`flex flex-col text-center ${calibrationContentClass}`} style={{ minHeight: 330, justifyContent: "center" }}>
+            <div className="transition-opacity duration-150 delay-75" style={{ color: C.gold, fontSize: 11, letterSpacing: 1.2, opacity: calibrationMotionPhase === "entered" ? 1 : 0 }}>身份啟動</div>
+            <h2 className="transition-opacity duration-200 delay-150" style={{ color: C.text, fontSize: 22, fontWeight: 800, margin: "8px 0 0", opacity: calibrationMotionPhase === "entered" ? 1 : 0 }}>策略執行者已就位</h2>
+            <div style={{ color: "#a84d4d", fontSize: 14, fontWeight: 700, lineHeight: 1.6, marginTop: 20 }}>課題分離：我做我的，市場會給我答案。</div>
+            <div style={{ color: C.textFaint, fontSize: 11, marginTop: 20 }}>今日唯一任務</div>
+            <div style={{ color: C.text, fontSize: 16, fontWeight: 700, marginTop: 5 }}>等待策略允許，再出手。</div>
+            {displayedExecutionInstruction && <div style={{ color: C.textFaint, fontSize: 11.5, lineHeight: 1.5, marginTop: 16 }}>今日提醒：{displayedExecutionInstruction.instruction}</div>}
+            <button
+              type="button"
+              disabled={!allCalibrationChecked || isCalibrationTransitioning}
+              onClick={completeMorningPlan}
+              className={`mt-6 ${calibrationButtonClass}`}
+              style={{ background: allCalibrationChecked ? C.goldDim : C.raised, color: allCalibrationChecked ? C.text : C.textFaint, border: `1px solid ${allCalibrationChecked ? "rgba(203,163,95,0.42)" : C.hair}` }}
+            >
+              進入今日修煉
+            </button>
+          </div>
+        )
         )}
         </Card>
       </div>
@@ -657,7 +772,6 @@ export default function PracticeTab({ ctx }) {
             day.morning_plan !== true ? "locked" : day.checklist_pass === true ? "completed" : "pending"
           )}
         >
-        <CurrentStepTag step="checklist" />
         {day.morning_plan !== true ? (
           <div className="flex items-center gap-2.5 rounded-lg px-3 py-3" style={{ background: C.raised, border: `1px solid ${C.hair}`, color: C.textFaint }}>
             <span style={{ fontSize: 15 }}>◇</span>
@@ -689,13 +803,13 @@ export default function PracticeTab({ ctx }) {
             下一筆交易前，重新確認執行條件
           </div>
         )}
-        {latestExecutionInstruction && (
+        {displayedExecutionInstruction && (
           <div
             className="mb-2.5 rounded-lg px-3 py-2.5"
             style={{ background: "rgba(203,145,72,0.065)", border: "1px solid rgba(203,145,72,0.38)" }}
           >
             <div style={{ color: C.gold, fontSize: 10.5, letterSpacing: 0.8 }} className="mb-1">本輪修正指令</div>
-            <div style={{ color: C.text, fontSize: 13.5, lineHeight: 1.6 }}>{latestExecutionInstruction.instruction}</div>
+            <div style={{ color: C.text, fontSize: 13.5, lineHeight: 1.6 }}>{displayedExecutionInstruction.instruction}</div>
             <div style={{ color: C.textFaint, fontSize: 11, lineHeight: 1.45, marginTop: 5 }}>確認本筆交易沒有違反這條規則。</div>
           </div>
         )}
@@ -769,7 +883,6 @@ export default function PracticeTab({ ctx }) {
         <>
         <SectionLabel>{editingId ? "編輯交易" : "執行交易"}</SectionLabel>
         <Card style={stepCardStyle(currentStep === "record" ? "record" : "execute")}>
-        <CurrentStepTag step={currentStep === "record" ? "record" : "execute"} />
         {activeProtectionTypes.length > 0 && (
           <div className="space-y-2 mb-3">
             {activeProtectionTypes.map(([type, state]) => (

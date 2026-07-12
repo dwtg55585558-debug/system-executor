@@ -5,16 +5,16 @@ import {
   Check,
   ChevronDown,
   Dumbbell,
-  Pencil,
   ScrollText,
 } from "lucide-react";
 import Card from "../components/Card.jsx";
 import CultivatorNameModal from "../components/CultivatorNameModal.jsx";
+import CharacterStatusCard from "../components/CharacterStatusCard.jsx";
+import SystemMissionPanel from "../components/SystemMissionPanel.jsx";
+import { resolveCharacterStage } from "../config/characterStages.js";
 import { C, FONT_DISPLAY, FONT_MONO } from "../styles/theme.js";
 import { QUOTES, JOURNAL_GAP_WARNING } from "../utils/constants.js";
 import { journalGapDays } from "../utils/helpers.js";
-import { titleForLevel } from "../utils/levels.js";
-import executorApprentice from "../assets/characters/executor-apprentice.png";
 
 export default function HomeTab({ ctx }) {
   const {
@@ -30,6 +30,7 @@ export default function HomeTab({ ctx }) {
     lvl,
     resetTodayToBaseline,
     resetAllData,
+    openSuccessfulWaitModal,
   } = ctx;
   const [editingName, setEditingName] = useState(false);
   const [showAttributes, setShowAttributes] = useState(false);
@@ -65,62 +66,59 @@ export default function HomeTab({ ctx }) {
 
   const stopLossMode = !!day.stopLossMode;
   const gapDays = journalGapDays(data.history);
-  const tradeTrainingDone = !!(day.strategy_trade || day.successful_wait);
-  const checklistCompletedToday =
-    day.claimedRewards?.checklist === true ||
-    data.expLog.some((log) => log.date === ctx.today && log.label === "交易前 Checklist");
-  const coreStages = [
-    { key: "morning", label: "晨間校準", done: !!day.morning_plan },
-    { key: "checklist", label: "交易前準備", done: checklistCompletedToday },
-    { key: "training", label: "策略執行", done: tradeTrainingDone },
-    { key: "journal", label: "今日復盤", done: !!day.journal },
-  ];
-  const completedCoreCount = coreStages.filter((stage) => stage.done).length;
-  const coreProgress = (completedCoreCount / coreStages.length) * 100;
-  const nextIncompleteIndex = coreStages.findIndex((stage) => !stage.done);
-
+  const hasViolation = (day.violations?.length || 0) > 0;
+  const stage = resolveCharacterStage(data.identity);
+  const nextTradeNumber = day.trades.length + 1;
   let nextAction;
-  if (day.journal) {
-    nextAction = { eyebrow: "今日結算", title: "今日修煉已完成", description: "今天的策略樣本、紀律與修正提醒已完成記錄。", complete: true };
-  } else if (!day.morning_plan) {
-    nextAction = { eyebrow: "今日起式", title: "開始晨間校準", description: "先設定今日交易邊界。", cta: "開始校準", tab: "practice", target: "morning-calibration" };
-  } else if (day.checklist_pass === true) {
-    nextAction = {
-      eyebrow: "交易許可",
-      title: "本筆交易許可已取得",
-      description: "訊號、風險與止損已確認。",
-      nextLabel: "下一步",
-      nextText: "按照 SOP 執行這筆交易",
-      cta: `執行第 ${day.trades.length + 1} 筆交易`,
-      tab: "practice",
-      target: "trade-practice",
-      permission: true,
-    };
-  } else if (day.trades.length > 0) {
-    nextAction = {
-      eyebrow: "下一輪準備",
-      title: `第 ${day.trades.length} 筆策略樣本已記錄`,
-      description: "本筆交易許可已重置。下一筆交易前，必須重新完成交易前準備。",
-      cta: "重新取得下一筆許可",
-      tab: "practice",
-      target: "pre-trade-checklist",
-      secondary: { cta: "結束今日交易，開始復盤", tab: "journal", target: "decision-journal" },
-    };
-  } else {
-    nextAction = {
-      eyebrow: "身份啟動",
-      title: "策略執行者已就位",
-      description: "今日身份與邊界已確認。",
-      nextLabel: "下一關",
-      nextText: "取得本筆交易許可",
-      cta: "進入交易前準備",
-      tab: "practice",
-      target: "pre-trade-checklist",
-    };
-  }
+  if (day.journal) nextAction = { status: "今日修煉完成", title: "今日任務已結算", description: "今日的成果由執行品質決定，不由盈虧決定。", cta: "查看今日修煉紀錄", tab: "journal", target: "decision-journal", complete: true };
+  else if (day.successful_wait) nextAction = { status: "等待任務已完成", title: <>你選擇等待，<br />而不是<span className="whitespace-nowrap">製造交易</span></>, description: "今日交易已結束，接著完成修煉結算。", cta: "開始今日復盤", tab: "journal", target: "decision-journal" };
+  else if (stopLossMode) nextAction = { status: "系統保護中", title: "今日交易權限已收回", description: "接下來的任務是停止擴大情緒與風險。", cta: "開始保護性復盤", tab: "journal", target: "decision-journal", risk: true };
+  else if (!day.morning_plan) nextAction = { status: "未啟動", title: "身份尚未啟動", description: "先確認今天的交易身份與執行邊界。", cta: "開始身份啟動", tab: "practice", target: "morning-calibration" };
+  else if (day.checklist_pass === true) nextAction = { status: "出手許可已取得", title: `第 ${nextTradeNumber} 筆出手許可已取得`, description: "只在所有進場條件成立時提交策略樣本。", cta: "提交策略樣本", tab: "practice", target: "trade-practice", permission: true, tradeNumber: nextTradeNumber };
+  else if (day.trades.length > 0) nextAction = { status: "樣本已提交", title: "本筆策略樣本已提交", description: "下一筆交易仍需重新取得出手許可。", cta: "取得下一筆出手許可", tab: "practice", target: "pre-trade-checklist", secondary: { label: "今日交易已結束｜開始今日復盤", tab: "journal", target: "decision-journal" } };
+  else nextAction = { status: "系統已同步", title: "等待策略訊號", description: "沒有符合策略的機會，也是一項完整任務。", cta: "取得本筆出手許可", tab: "practice", target: "pre-trade-checklist", secondary: { label: "今日沒有策略機會｜完成等待任務", action: "successful-wait" } };
 
-  const expPct = lvl.expToNext ? Math.round((lvl.expInto / lvl.expToNext) * 100) : 100;
-  const rankTitle = titleForLevel(lvl.level);
+  const missionPath = day.successful_wait === true
+    ? "waiting"
+    : day.checklist_pass === true || day.trades.length > 0
+      ? "trade"
+      : "undecided";
+  const syncNode = hasViolation
+    ? { key: "sync", label: day.journal ? "違規已誠實記錄" : "系統同步中斷", state: "warning" }
+    : day.journal
+      ? { key: "sync", label: "零違規完成", state: "completed" }
+      : { key: "sync", label: "系統同步維持中", state: "ongoing-neutral" };
+  const settlementNode = {
+    key: "settlement",
+    label: "今日任務結算",
+    state: day.journal ? "completed" : day.successful_wait ? "active" : "pending",
+    detail: !day.journal && day.successful_wait ? "提交修煉領悟與下一輪提醒。" : undefined,
+  };
+  const unlockNode = { key: "unlock", label: "身份啟動", state: day.morning_plan ? "completed" : "active", detail: !day.morning_plan ? nextAction.description : undefined };
+  const signalNode = { key: "signal", label: "等待策略訊號", state: !day.morning_plan ? "pending" : missionPath === "undecided" ? "active" : "completed", detail: missionPath === "undecided" && day.morning_plan ? nextAction.description : undefined };
+  const missionNodes = missionPath === "waiting"
+    ? [
+        unlockNode,
+        signalNode,
+        { key: "wait", label: "完成成功等待", state: "completed" },
+        syncNode,
+        settlementNode,
+      ]
+    : [
+        unlockNode,
+        signalNode,
+        {
+          key: "permission",
+          label: day.trades.length > 0 && !day.checklist_pass ? "取得下一筆出手許可" : "取得本筆出手許可",
+          state: day.checklist_pass ? "completed" : day.morning_plan && day.trades.length > 0 && !day.journal ? "active" : "pending",
+          detail: day.morning_plan && day.trades.length > 0 && !day.checklist_pass && !day.journal ? "下一筆交易前，必須重新完成交易前準備。" : undefined,
+        },
+        { key: "sample", label: "提交策略樣本", state: day.checklist_pass ? "active" : day.trades.length > 0 ? "completed" : "pending", detail: day.checklist_pass ? nextAction.description : undefined },
+        { key: "record", label: "完成交易紀錄", state: day.trades.length > 0 ? "completed" : "pending" },
+        syncNode,
+        settlementNode,
+      ];
+
   const cultivatorName = data.identity.name?.trim() || "執行者";
   const characterStats = data.identity.stats;
   const hexAttributes = [
@@ -185,97 +183,10 @@ export default function HomeTab({ ctx }) {
 
   return (
     <div>
-      <Card
-        style={{
-          position: "relative",
-          overflow: "hidden",
-          borderColor: C.goldDim,
-          background:
-            "radial-gradient(circle at 18% 4%, rgba(203,163,95,0.2), transparent 30%), linear-gradient(145deg, rgba(7,8,11,0.99), rgba(15,16,21,0.98) 58%, rgba(25,22,17,0.98))",
-          boxShadow: "0 18px 38px rgba(0,0,0,0.4), inset 0 1px 0 rgba(203,163,95,0.16)",
-          padding: "12px 14px",
-        }}
-      >
-        <div className="flex items-center justify-between gap-3">
-          <div style={{ color: C.gold, fontFamily: FONT_DISPLAY, fontSize: 25, lineHeight: 1 }}>
-            Lv.{lvl.level}
-          </div>
-          <div className="text-right">
-            <div style={{ color: C.gold, fontSize: 12, fontWeight: 700 }}>{rankTitle}</div>
-            <div style={{ color: "rgba(126,130,142,0.62)", fontFamily: FONT_MONO, fontSize: 9, marginTop: 2 }}>{ctx.today}</div>
-          </div>
-        </div>
-
-        <div className="mt-2.5 flex items-center gap-3">
-          <div
-            className="shrink-0 flex items-center justify-center"
-            style={{
-              width: 84,
-              height: 84,
-              borderRadius: "50%",
-              border: "1px solid rgba(203,163,95,0.36)",
-              background: "radial-gradient(circle at 50% 42%, rgba(203,163,95,0.3), rgba(10,11,14,0.92) 56%, #040507)",
-              overflow: "hidden",
-            }}
-          >
-            <img src={executorApprentice} alt="修煉者角色" style={{ width: "100%", height: "auto", objectFit: "contain" }} />
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="min-w-0 flex-1">
-                <div style={{ color: C.text, fontFamily: FONT_DISPLAY, fontSize: 19, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {cultivatorName}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingName(true)}
-                aria-label="更改名稱"
-                className="shrink-0 flex items-center justify-center"
-                style={{ width: 30, height: 30, borderRadius: "50%", border: "1px solid rgba(203,163,95,0.26)", background: "rgba(203,163,95,0.08)", color: C.gold }}
-              >
-                <Pencil size={14} />
-              </button>
-            </div>
-
-            <div className="mt-2.5 h-2 overflow-hidden rounded-full" style={{ background: "rgba(42,44,54,0.86)" }}>
-              <div style={{ width: `${expPct}%`, height: "100%", background: `linear-gradient(90deg, ${C.goldDim}, ${C.gold})` }} />
-            </div>
-            <div className="mt-1.5 flex justify-between gap-2" style={{ fontFamily: FONT_MONO, fontSize: 10 }}>
-              <span style={{ color: C.gold }}>{lvl.expToNext ? `${lvl.expInto} / ${lvl.expToNext} EXP` : "MAX EXP"}</span>
-              <span style={{ color: C.textFaint }}>{lvl.expToNext ? `還差 ${Math.max(0, lvl.expToNext - lvl.expInto)} EXP` : "已達最高等級"}</span>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <Card className="mt-3" style={{ borderColor: nextAction.complete || nextAction.permission ? C.sage : handoffGlow ? C.gold : C.goldDim, background: "linear-gradient(135deg, rgba(19,20,25,0.96), rgba(27,29,36,0.78))", boxShadow: handoffGlow ? "0 0 24px rgba(203,163,95,0.22), inset 0 0 16px rgba(203,163,95,0.06)" : "none", transition: "border-color 600ms ease, box-shadow 600ms ease" }}>
-        <div style={{ color: nextAction.complete || nextAction.permission ? C.sage : C.gold, fontFamily: FONT_MONO, fontSize: 10, letterSpacing: 1, opacity: handoffSettled ? 1 : 0, transition: "opacity 240ms ease" }}>{nextAction.eyebrow}</div>
-        <div className="mt-2 flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <div style={{ color: nextAction.complete ? C.sage : C.text, fontFamily: FONT_DISPLAY, fontSize: 18, opacity: handoffSettled ? 1 : 0, transition: "opacity 240ms ease 80ms" }}>{nextAction.title}</div>
-            <div style={{ color: C.textDim, fontSize: 12.5, lineHeight: 1.5, marginTop: 4 }}>{nextAction.description}</div>
-            {nextAction.nextText && <div style={{ color: C.textDim, fontSize: 12, marginTop: 10, opacity: handoffSettled ? 1 : 0, transition: "opacity 240ms ease 160ms" }}><span style={{ color: C.textFaint }}>{nextAction.nextLabel}：</span>{nextAction.nextText}</div>}
-          </div>
-          {nextAction.complete ? (
-            <div className="shrink-0 flex items-center gap-1.5" style={{ color: C.sage, fontSize: 12, fontWeight: 700 }}>
-              <Check size={16} /> 完成
-            </div>
-          ) : (
-            <div className="shrink-0 flex flex-col gap-2" style={{ opacity: handoffSettled ? 1 : 0, transition: "opacity 240ms ease 160ms" }}>
-              <button type="button" onClick={() => navigateTo(nextAction.tab, nextAction.target)} className="rounded-lg px-4 py-2 text-sm font-medium" style={{ minHeight: 40, background: C.goldDim, color: C.text }}>
-                {nextAction.cta}
-              </button>
-              {nextAction.secondary && (
-                <button type="button" onClick={() => navigateTo(nextAction.secondary.tab, nextAction.secondary.target)} className="rounded-lg px-3 py-2 text-xs font-medium" style={{ minHeight: 40, border: `1px solid ${C.hair}`, background: C.raised, color: C.textDim }}>
-                  {nextAction.secondary.cta}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </Card>
+      <div style={{ opacity: handoffSettled ? 1 : .86, transition: "opacity 240ms ease", filter: handoffGlow ? "drop-shadow(0 0 10px rgba(127,166,200,.18))" : "none" }}>
+        <CharacterStatusCard stage={stage} activated={!!day.morning_plan} risk={stopLossMode || hasViolation} level={lvl.level} name={cultivatorName} date={ctx.today} mission={nextAction} onEditName={() => setEditingName(true)} onPrimary={() => navigateTo(nextAction.tab, nextAction.target)} onSecondary={() => nextAction.secondary.action === "successful-wait" ? openSuccessfulWaitModal() : navigateTo(nextAction.secondary.tab, nextAction.secondary.target)} />
+      </div>
+      <SystemMissionPanel nodes={missionNodes} accent={stage.accent} />
 
       {gapDays >= JOURNAL_GAP_WARNING && !day.journal && (
         <Card className="mt-3" style={{ borderColor: C.ashDim, background: "rgba(90,54,52,0.22)" }}>
@@ -290,30 +201,6 @@ export default function HomeTab({ ctx }) {
           </div>
         </Card>
       )}
-
-      <div className="mt-4 mb-2 flex items-end justify-between gap-3">
-        <div style={sectionTitleStyle}>今日修煉</div>
-        <div style={{ color: C.gold, fontFamily: FONT_MONO, fontSize: 12 }}>{completedCoreCount} / 4</div>
-      </div>
-      <Card style={{ borderColor: C.hair, background: "linear-gradient(180deg, #131419, #101116)", padding: 12 }}>
-        <div className="mb-2 h-1.5 overflow-hidden rounded-full" style={{ background: "rgba(42,44,54,0.86)" }}>
-          <div className="h-full rounded-full" style={{ width: `${coreProgress}%`, background: C.sage }} />
-        </div>
-        {coreStages.map((stage, index) => {
-          const status = stage.done ? "已完成" : index === nextIncompleteIndex ? "下一步" : "尚未完成";
-          return (
-            <div key={stage.key} className="flex items-center justify-between gap-3" style={{ borderTop: index === 0 ? "none" : `1px solid ${C.hair}`, padding: "11px 2px" }}>
-              <div style={{ color: stage.done ? C.textDim : C.text, fontSize: 13.5, fontWeight: 700 }}>{stage.label}</div>
-              <div className="flex items-center gap-2" style={{ color: stage.done ? C.sage : index === nextIncompleteIndex ? C.gold : C.textFaint, fontSize: 11.5 }}>
-                {status}
-                <span className="flex items-center justify-center" style={{ width: 22, height: 22, borderRadius: "50%", border: `1px solid ${stage.done ? C.sage : C.hair}`, background: stage.done ? "rgba(62,90,73,0.45)" : "transparent" }}>
-                  {stage.done && <Check size={13} strokeWidth={3} />}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </Card>
 
       <div className="mt-4 mb-2" style={sectionTitleStyle}>每日交易能量</div>
       <Card style={{ borderColor: stopLossMode ? "rgba(185,87,79,0.72)" : C.hair, background: stopLossMode ? "linear-gradient(135deg, rgba(90,54,52,0.3), rgba(19,20,25,0.9))" : "rgba(19,20,25,0.86)" }}>

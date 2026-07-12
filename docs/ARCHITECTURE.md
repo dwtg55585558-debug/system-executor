@@ -86,6 +86,7 @@ state
         accountType
       stopLossMode
       successful_wait
+      successful_wait_reason
       violations
       bossResists
       journal

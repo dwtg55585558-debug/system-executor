@@ -28,6 +28,7 @@ function restoreTodayFromBaseline(prev, date, baseline) {
     trades: baselineDay.trades ? [...baselineDay.trades] : empty.trades,
     strategy_trade: baselineDay.strategy_trade,
     successful_wait: baselineDay.successful_wait ?? empty.successful_wait,
+    successful_wait_reason: baselineDay.successful_wait_reason ?? empty.successful_wait_reason,
     violations: baselineDay.violations ? [...baselineDay.violations] : empty.violations,
     bossResists: baselineDay.bossResists ? [...baselineDay.bossResists] : empty.bossResists,
     journal: baselineDay.journal ?? empty.journal,

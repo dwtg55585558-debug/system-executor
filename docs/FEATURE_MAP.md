@@ -357,10 +357,14 @@ Behavior:
 State:
 
 - `day.successful_wait`
+- `day.successful_wait_reason`
+
+`day.successful_wait === true` is the persisted source of truth that today's trading flow is closed; there is no separate `tradingClosed` field. Completion requires a reason and explicit confirmation that no new execution permission will be requested. Practice then keeps the morning-calibration summary, replaces Checklist and trade-entry controls with one waiting-completed card, and routes the primary action to Journal. Shared Checklist and new-trade submission paths reject writes after successful waiting, so no Checklist reward, trade, Energy spend, trade reward, or `strategy_trade` mutation can occur.
 
 Reward:
 
 - +50 EXP
+- discipline +1
 
 ### Evening Reflection
 

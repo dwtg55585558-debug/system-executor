@@ -74,6 +74,14 @@ export default function DayDetailModal({ date, session, onClose }) {
         <div className="overflow-y-auto px-4 pt-3 pb-7" style={{ maxHeight: "calc(78vh - 66px)" }}>
           <SectionLabel>今日執行摘要</SectionLabel>
           <div style={{ color: C.text, fontSize: 13, lineHeight: 1.65 }}>{getExecutionSummary(session, counts)}</div>
+          {session.successful_wait === true && session.successful_wait_reason?.label && (
+            <div className="mt-2 rounded-lg px-3 py-2.5" style={{ background: C.sageDim, border: `1px solid rgba(107,154,126,0.24)`, fontSize: 12.5, lineHeight: 1.6 }}>
+              <div style={{ color: C.textDim }}>等待原因：{session.successful_wait_reason.label}</div>
+              {session.successful_wait_reason.code === "other" && session.successful_wait_reason.note && (
+                <div className="mt-1" style={{ color: C.textFaint }}>補充：{session.successful_wait_reason.note}</div>
+              )}
+            </div>
+          )}
 
           {session.journal && (
             <>

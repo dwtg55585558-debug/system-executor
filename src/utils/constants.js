@@ -65,8 +65,8 @@ export const EVENING_REFLECTION_REASONS = [
 export const ACHIEVEMENTS = [
   {
     id: "first_wait",
-    name: "第一次成功等待",
-    desc: "整天沒有交易,仍完成修練",
+    name: "首次完成等待任務",
+    desc: "沒有有效機會時，你選擇遵守系統。",
     rarity: "common",
     check: (s) => s.totalSuccessfulWaits >= 1,
   },

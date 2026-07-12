@@ -4,8 +4,9 @@ import SectionLabel from "../components/SectionLabel.jsx";
 import ToggleRow from "../components/ToggleRow.jsx";
 import ConfirmModal from "../components/ConfirmModal.jsx";
 import SystemCheckModal from "../components/SystemCheckModal.jsx";
-import executorApprentice from "../assets/characters/executor-apprentice.png";
-import { C } from "../styles/theme.js";
+import executorApprentice from "../assets/characters/apprentice-idle.jpeg";
+import { resolveCharacterStage } from "../config/characterStages.js";
+import { C, FONT_DISPLAY } from "../styles/theme.js";
 import {
   CHECKLIST_ITEMS,
   BOSSES,
@@ -129,7 +130,7 @@ const getAccountProtectionStates = (trades) => {
 };
 
 export default function PracticeTab({ ctx }) {
-  const { day, data, lvl, updateDay, addExp, addReward, adjustIntegrity, spendEnergy, showToast, setTab, setBossCard, navigationTarget, setNavigationTarget } = ctx;
+  const { day, data, lvl, updateDay, addExp, addReward, adjustIntegrity, spendEnergy, showToast, setTab, setBossCard, navigationTarget, setNavigationTarget, openSuccessfulWaitModal } = ctx;
   const latestDayRef = useRef(day);
   latestDayRef.current = day;
   const calibrationTransitionRef = useRef(false);
@@ -180,6 +181,12 @@ export default function PracticeTab({ ctx }) {
       : null);
   const identityDisplayName = data.identity.name?.trim() || "執行者";
   const shouldDisplayIdentityName = !/^\d+$/.test(identityDisplayName);
+  const stage = resolveCharacterStage(data.identity);
+  const stageAccent = stage.accent;
+  const stageAccentSoft = `color-mix(in srgb, ${stageAccent} 8%, transparent)`;
+  const stageAccentBorder = `color-mix(in srgb, ${stageAccent} 62%, transparent)`;
+  const stageAccentMutedBorder = `color-mix(in srgb, ${stageAccent} 32%, transparent)`;
+  const darkStageSurface = "rgba(13, 18, 25, 0.96)";
 
   const morningCalibrationItems = [
     ...calibrationOaths,
@@ -226,11 +233,11 @@ export default function PracticeTab({ ctx }) {
   const stepCardStyle = (step, state = "pending") => ({
     borderColor:
       currentStep === step
-        ? "rgba(203,163,95,0.72)"
+        ? stageAccent
         : state === "completed"
           ? "rgba(107,154,126,0.28)"
           : C.hair,
-    background: currentStep === step ? "rgba(203,163,95,0.055)" : C.surface,
+    background: C.surface,
     opacity: currentStep === step ? 1 : state === "locked" ? 0.56 : state === "completed" ? 0.76 : 1,
   });
   const calibrationContentClass = `transition-all ${calibrationMotionPhase === "exiting" ? "duration-[160ms]" : "duration-[260ms]"} ease-out ${
@@ -241,7 +248,7 @@ export default function PracticeTab({ ctx }) {
         : "translate-y-0 opacity-100"
   }`;
   const calibrationButtonClass =
-    "w-full rounded-lg py-2.5 text-sm font-semibold transition duration-[120ms] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-not-allowed disabled:opacity-60";
+    "w-full rounded-lg py-2.5 text-sm font-semibold transition duration-[120ms] active:scale-[0.98] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60";
 
   useEffect(() => {
     setShowMorningDetails(day.morning_plan !== true);
@@ -293,6 +300,10 @@ export default function PracticeTab({ ctx }) {
   };
 
   const completeChecklist = () => {
+    if (latestDayRef.current.successful_wait === true) {
+      showToast("等待任務已完成｜今日不再取得出手許可", "info");
+      return;
+    }
     if (day.morning_plan !== true) {
       showToast("請先完成晨間校準，再進行交易前準備", "info");
       setNavigationTarget("morning-calibration");
@@ -424,6 +435,10 @@ export default function PracticeTab({ ctx }) {
       setIsTradeFormOpen(true);
       return;
     }
+    if (day.successful_wait === true) {
+      showToast("等待任務已完成｜今日交易流程已結束", "info");
+      return;
+    }
     if (!day.stopLossMode && day.morning_plan !== true) {
       showToast("請先完成晨間校準，再開始今日交易", "info");
       setNavigationTarget("morning-calibration");
@@ -505,6 +520,11 @@ export default function PracticeTab({ ctx }) {
       }));
       showToast("已更新交易", "info");
     } else {
+      if (latestDay.successful_wait === true) {
+        setRiskCheck(null);
+        showToast("等待任務已完成｜今日交易流程已結束", "info");
+        return;
+      }
       if (!latestDay.stopLossMode && latestDay.morning_plan !== true) {
         setRiskCheck(null);
         showToast("請先完成晨間校準，再開始今日交易", "info");
@@ -574,6 +594,10 @@ export default function PracticeTab({ ctx }) {
   };
 
   const submitTrade = () => {
+    if (!editingId && day.successful_wait === true) {
+      showToast("等待任務已完成｜今日交易流程已結束", "info");
+      return;
+    }
     if (!editingId && !day.stopLossMode && day.morning_plan !== true) {
       showToast("請先完成晨間校準，再開始今日交易", "info");
       setNavigationTarget("morning-calibration");
@@ -606,14 +630,6 @@ export default function PracticeTab({ ctx }) {
     commitTrade(trade);
   };
 
-  const logSuccessfulWait = () => {
-    if (day.successful_wait) return;
-    updateDay((d) => ({ ...d, successful_wait: true }));
-    addReward({ exp: 50, label: "成功等待", statKey: "discipline" });
-    showToast("成功等待完成｜EXP +50｜紀律 +1", "reward");
-    returnToHomeTop();
-  };
-
   const resistBoss = (bossId) => {
     if (day.bossResists.includes(bossId)) return;
     updateDay((d) => ({ ...d, bossResists: [...d.bossResists, bossId] }));
@@ -629,6 +645,49 @@ export default function PracticeTab({ ctx }) {
     setBossCard(BOSSES.find((b) => b.id === v.bossId));
   };
 
+  if (day.successful_wait === true) {
+    const waitReason = day.successful_wait_reason;
+    return (
+      <div>
+        <div style={{ color: C.textDim, fontSize: 13, letterSpacing: 1.2 }} className="mb-1">
+          交易修煉關卡
+        </div>
+
+        <SectionLabel>晨間校準</SectionLabel>
+        <Card style={stepCardStyle("morning", "completed")}>
+          <div className="flex items-center gap-2.5 rounded-lg px-3 py-3" style={{ background: C.raised, border: `1px solid ${C.hair}` }}>
+            <span style={{ color: C.sage, fontSize: 16 }}>✓</span>
+            <span>
+              <span style={{ display: "block", color: C.text, fontSize: 13, fontWeight: 700 }}>策略執行者已就位</span>
+              <span style={{ display: "block", color: C.textFaint, fontSize: 11.5, marginTop: 2 }}>今日身份與邊界已確認。</span>
+            </span>
+          </div>
+        </Card>
+
+        <SectionLabel>等待任務</SectionLabel>
+        <Card style={{ borderColor: "rgba(107,154,126,0.36)", background: "linear-gradient(145deg, rgba(44,69,57,.28), rgba(19,20,25,.96))" }}>
+          <div style={{ color: C.sage, fontSize: 11, fontWeight: 800, letterSpacing: 1 }}>等待任務已完成</div>
+          <div className="mt-2" style={{ color: C.text, fontFamily: FONT_DISPLAY, fontSize: 20, lineHeight: 1.4 }}>今日交易流程已結束</div>
+          <div className="mt-2" style={{ color: C.textDim, fontSize: 13, lineHeight: 1.6 }}>你選擇等待，而不是製造交易。</div>
+          {waitReason?.label && (
+            <div className="mt-4 rounded-lg px-3 py-2.5" style={{ background: C.raised, border: `1px solid ${C.hair}`, color: C.textDim, fontSize: 12.5, lineHeight: 1.55 }}>
+              <div><span style={{ color: C.textFaint }}>原因：</span>{waitReason.label}</div>
+              {waitReason.code === "other" && waitReason.note && <div className="mt-1"><span style={{ color: C.textFaint }}>補充：</span>{waitReason.note}</div>}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => { setNavigationTarget("decision-journal"); setTab("journal"); }}
+            className="mt-4 w-full rounded-xl px-4 py-3 text-sm font-bold"
+            style={{ minHeight: 46, color: "#071018", background: stageAccent, boxShadow: `0 7px 16px -10px ${stageAccent}` }}
+          >
+            {day.journal ? "查看今日復盤" : "開始今日復盤"}
+          </button>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div style={{ color: C.textDim, fontSize: 13, letterSpacing: 1.2 }} className="mb-1">
@@ -640,9 +699,17 @@ export default function PracticeTab({ ctx }) {
         <Card
           style={{
             ...stepCardStyle("morning", day.morning_plan === true ? "completed" : "pending"),
+            background:
+              day.morning_plan === true
+                ? C.surface
+                : `radial-gradient(circle at 50% 0%, ${stageAccentSoft}, transparent 48%), ${darkStageSurface}`,
+            borderColor:
+              day.morning_plan === true
+                ? "rgba(107,154,126,0.28)"
+                : stageAccentBorder,
             boxShadow:
               calibrationStage === "ready" && calibrationMotionPhase !== "entered"
-                ? "0 0 20px rgba(203,163,95,0.18)"
+                ? `0 0 20px ${stageAccentSoft}`
                 : "none",
             transition: "border-color 240ms ease, box-shadow 240ms ease",
           }}
@@ -669,7 +736,7 @@ export default function PracticeTab({ ctx }) {
         day.morning_plan === true ? (
           <>
             <div className="mb-3 text-center">
-              <div style={{ color: C.gold, fontSize: 11, letterSpacing: 1.2 }}>身份啟動完成</div>
+              <div style={{ color: stageAccent, fontSize: 11, letterSpacing: 1.2 }}>身份啟動完成</div>
               <div style={{ color: C.text, fontSize: 20, fontWeight: 800, marginTop: 5 }}>策略執行者已就位</div>
               <div style={{ color: C.textFaint, fontSize: 12, marginTop: 5 }}>今日身份與邊界已確認。</div>
             </div>
@@ -692,10 +759,10 @@ export default function PracticeTab({ ctx }) {
           </>
         ) : calibrationStage === "intro" ? (
           <div className={`flex flex-col items-center text-center ${calibrationContentClass}`} style={{ minHeight: 330, justifyContent: "center" }}>
-            <div style={{ color: C.gold, fontSize: 11, letterSpacing: 1.5 }}>今日修煉</div>
+            <div style={{ color: stageAccent, fontSize: 11, letterSpacing: 1.5 }}>今日修煉</div>
             <img src={executorApprentice} alt="策略執行者" style={{ width: 112, height: 132, objectFit: "contain", margin: "6px auto" }} />
             <h2 style={{ color: C.text, fontSize: 24, fontWeight: 800, margin: 0 }}>策略執行者</h2>
-            {shouldDisplayIdentityName && <div style={{ color: C.gold, fontSize: 11.5, marginTop: 4 }}>{identityDisplayName}</div>}
+            {shouldDisplayIdentityName && <div style={{ color: stageAccent, fontSize: 11.5, marginTop: 4 }}>{identityDisplayName}</div>}
             {Number.isFinite(lvl?.level) && <div style={{ color: C.textFaint, fontSize: 11, marginTop: 3 }}>LV. {lvl.level}</div>}
             <div style={{ color: C.text, fontSize: 15, marginTop: 10 }}>今天，我不追結果，只執行策略。</div>
             <div style={{ color: C.textFaint, fontSize: 12.5, marginTop: 6 }}>完成校準，進入今日修煉狀態。</div>
@@ -704,7 +771,7 @@ export default function PracticeTab({ ctx }) {
               disabled={isCalibrationTransitioning}
               onClick={() => runCalibrationTransition(() => { setCalibrationStage("oath"); setCalibrationStep(0); })}
               className={`mt-5 ${calibrationButtonClass}`}
-              style={{ background: C.goldDim, color: C.text, border: "1px solid rgba(203,163,95,0.42)" }}
+              style={{ background: stageAccent, color: "#071018", border: `1px solid ${stageAccent}`, boxShadow: `0 8px 20px -14px ${stageAccent}`, outlineColor: stageAccent }}
             >
               開始身份校準
             </button>
@@ -716,34 +783,34 @@ export default function PracticeTab({ ctx }) {
               return (
                 <>
                   <div className="flex items-center justify-between">
-                    <span className="rounded-full px-2 py-1" style={{ color: C.gold, background: C.goldDim, fontSize: 10.5, letterSpacing: 0.8 }}>{oath.title}</span>
+                    <span className="rounded-full px-2 py-1" style={{ color: stageAccent, background: stageAccentSoft, border: `1px solid ${stageAccentMutedBorder}`, fontSize: 10.5, letterSpacing: 0.8 }}>{oath.title}</span>
                     <span style={{ color: C.textFaint, fontSize: 11 }}>{calibrationStep + 1} / 4</span>
                   </div>
                   <div style={{ color: C.text, fontSize: 19, fontWeight: 700, lineHeight: 1.75, margin: "22px 2px" }}>{oath.text}</div>
-                  <button type="button" disabled={isCalibrationTransitioning} onClick={confirmCalibrationStep} className={calibrationButtonClass} style={{ background: C.goldDim, color: C.text, border: "1px solid rgba(203,163,95,0.42)" }}>
+                  <button type="button" disabled={isCalibrationTransitioning} onClick={confirmCalibrationStep} className={calibrationButtonClass} style={{ background: stageAccent, color: "#071018", border: `1px solid ${stageAccent}`, boxShadow: `0 8px 20px -14px ${stageAccent}`, outlineColor: stageAccent }}>
                     {oath.action}
                   </button>
                 </>
               );
             })() : (
-              <>
+              <div className="rounded-xl px-3 py-3" style={{ background: "rgba(10, 14, 20, 0.72)", border: `1px solid ${stageAccentMutedBorder}` }}>
                 <div className="flex items-center justify-between">
-                  <span className="rounded-full px-2 py-1" style={{ color: C.gold, background: C.goldDim, fontSize: 10.5, letterSpacing: 0.8 }}>上一輪留下的提醒</span>
+                  <span className="rounded-full px-2 py-1" style={{ color: stageAccent, background: stageAccentSoft, border: `1px solid ${stageAccentMutedBorder}`, fontSize: 10.5, letterSpacing: 0.8 }}>上一輪留下的提醒</span>
                   <span style={{ color: C.textFaint, fontSize: 11 }}>提醒確認</span>
                 </div>
                 <div style={{ color: C.text, fontSize: 19, fontWeight: 700, lineHeight: 1.7, marginTop: 22 }}>{displayedExecutionInstruction.instruction}</div>
                 <div style={{ color: C.textFaint, fontSize: 11, marginTop: 8 }}>記得 {formatReminderDate(displayedExecutionInstruction.date)} 的復盤提醒</div>
                 <div style={{ color: C.textDim, fontSize: 12.5, margin: "18px 0" }}>今天交易前，再看一次這句話。</div>
-                <button type="button" disabled={isCalibrationTransitioning} onClick={confirmExecutionInstruction} className={calibrationButtonClass} style={{ background: C.goldDim, color: C.text, border: "1px solid rgba(203,163,95,0.42)" }}>
+                <button type="button" disabled={isCalibrationTransitioning} onClick={confirmExecutionInstruction} className={calibrationButtonClass} style={{ background: stageAccentSoft, color: stageAccent, border: `1px solid ${stageAccentBorder}`, outlineColor: stageAccent }}>
                   我已看見這個提醒
                 </button>
-              </>
+              </div>
             )}
-            <button type="button" disabled={isCalibrationTransitioning} onClick={returnCalibrationStep} className="w-full pt-4 text-xs transition duration-[120ms] active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 disabled:opacity-60" style={{ color: C.textFaint }}>返回上一誓約</button>
+            <button type="button" disabled={isCalibrationTransitioning} onClick={returnCalibrationStep} className="w-full pt-4 text-xs transition duration-[120ms] active:scale-[0.98] focus:outline-none disabled:opacity-60" style={{ color: C.textFaint }}>返回上一誓約</button>
           </div>
         ) : (
           <div className={`flex flex-col text-center ${calibrationContentClass}`} style={{ minHeight: 330, justifyContent: "center" }}>
-            <div className="transition-opacity duration-150 delay-75" style={{ color: C.gold, fontSize: 11, letterSpacing: 1.2, opacity: calibrationMotionPhase === "entered" ? 1 : 0 }}>身份啟動</div>
+            <div className="transition-opacity duration-150 delay-75" style={{ color: stageAccent, fontSize: 11, letterSpacing: 1.2, opacity: calibrationMotionPhase === "entered" ? 1 : 0 }}>身份啟動</div>
             <h2 className="transition-opacity duration-200 delay-150" style={{ color: C.text, fontSize: 22, fontWeight: 800, margin: "8px 0 0", opacity: calibrationMotionPhase === "entered" ? 1 : 0 }}>策略執行者已就位</h2>
             <div style={{ color: C.textDim, fontSize: 14, fontWeight: 700, lineHeight: 1.6, marginTop: 20 }}>課題分離：我做我的，市場會給我答案。</div>
             <div style={{ color: C.textFaint, fontSize: 11, marginTop: 20 }}>今日唯一任務</div>
@@ -754,7 +821,7 @@ export default function PracticeTab({ ctx }) {
               disabled={!allCalibrationChecked || isCalibrationTransitioning}
               onClick={completeMorningPlan}
               className={`mt-6 ${calibrationButtonClass}`}
-              style={{ background: allCalibrationChecked ? C.goldDim : C.raised, color: allCalibrationChecked ? C.text : C.textFaint, border: `1px solid ${allCalibrationChecked ? "rgba(203,163,95,0.42)" : C.hair}` }}
+              style={{ background: allCalibrationChecked ? stageAccent : C.raised, color: allCalibrationChecked ? "#071018" : C.textFaint, border: `1px solid ${allCalibrationChecked ? stageAccent : C.hair}`, boxShadow: allCalibrationChecked ? `0 8px 20px -14px ${stageAccent}` : "none", outlineColor: stageAccent }}
             >
               進入今日修煉
             </button>
@@ -767,10 +834,14 @@ export default function PracticeTab({ ctx }) {
       <div id="pre-trade-checklist" style={{ scrollMarginTop: "16px" }}>
         <SectionLabel>交易前準備</SectionLabel>
         <Card
-          style={stepCardStyle(
-            "checklist",
-            day.morning_plan !== true ? "locked" : day.checklist_pass === true ? "completed" : "pending"
-          )}
+          style={{
+            ...stepCardStyle(
+              "checklist",
+              day.morning_plan !== true ? "locked" : day.checklist_pass === true ? "completed" : "pending"
+            ),
+            background: darkStageSurface,
+            borderColor: day.checklist_pass === true ? "rgba(107,154,126,0.28)" : day.morning_plan === true ? stageAccentBorder : C.hair,
+          }}
         >
         {day.morning_plan !== true ? (
           <div className="flex items-center gap-2.5 rounded-lg px-3 py-3" style={{ background: C.raised, border: `1px solid ${C.hair}`, color: C.textFaint }}>
@@ -799,29 +870,34 @@ export default function PracticeTab({ ctx }) {
         ) : (
         <>
         {day.checklist_pass !== true && (
-          <div className="mb-2 rounded-lg px-3 py-2 text-xs" style={{ background: "rgba(203,163,95,0.07)", border: `1px solid ${C.goldDim}`, color: C.gold }}>
+          <div className="mb-2 rounded-lg px-3 py-2 text-xs" style={{ background: stageAccentSoft, border: `1px solid ${stageAccentBorder}`, color: stageAccent }}>
             下一筆交易前，重新確認執行條件
           </div>
         )}
         {displayedExecutionInstruction && (
           <div
             className="mb-2.5 rounded-lg px-3 py-2.5"
-            style={{ background: "rgba(203,145,72,0.065)", border: "1px solid rgba(203,145,72,0.38)" }}
+            style={{ background: "rgba(10, 14, 20, 0.72)", border: `1px solid ${stageAccentMutedBorder}` }}
           >
-            <div style={{ color: C.gold, fontSize: 10.5, letterSpacing: 0.8 }} className="mb-1">本輪修正指令</div>
+            <div style={{ color: stageAccent, fontSize: 10.5, letterSpacing: 0.8 }} className="mb-1">本輪修正指令</div>
             <div style={{ color: C.text, fontSize: 13.5, lineHeight: 1.6 }}>{displayedExecutionInstruction.instruction}</div>
             <div style={{ color: C.textFaint, fontSize: 11, lineHeight: 1.45, marginTop: 5 }}>確認本筆交易沒有違反這條規則。</div>
           </div>
         )}
         {activeChecklistItems.map((c) => (
-          <div
+          <button
+            type="button"
             key={c.id}
             onClick={() => toggleCheck(c.id)}
+            disabled={day.morning_plan !== true || day.checklist_pass}
             aria-disabled={day.morning_plan !== true || day.checklist_pass}
-            className="flex items-center gap-2.5 py-1.5"
+            className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             style={{
               cursor: day.morning_plan !== true || day.checklist_pass ? "not-allowed" : "pointer",
               opacity: day.morning_plan !== true ? 0.48 : 1,
+              background: "rgba(10, 14, 20, 0.52)",
+              border: `1px solid ${C.hair}`,
+              outlineColor: stageAccent,
             }}
           >
             <div
@@ -829,21 +905,21 @@ export default function PracticeTab({ ctx }) {
               style={{
                 width: 18,
                 height: 18,
-                background: day.checklistChecks[c.id] || day.checklist_pass ? C.sageDim : "transparent",
-                border: `1.5px solid ${day.checklistChecks[c.id] || day.checklist_pass ? C.sage : C.textFaint}`,
+                background: day.checklist_pass ? C.sageDim : day.checklistChecks[c.id] ? stageAccentSoft : "transparent",
+                border: `1.5px solid ${day.checklist_pass ? C.sage : day.checklistChecks[c.id] ? stageAccent : C.textFaint}`,
               }}
             >
-              {(day.checklistChecks[c.id] || day.checklist_pass) && <span style={{ color: C.sage, fontSize: 11 }}>✓</span>}
+              {(day.checklistChecks[c.id] || day.checklist_pass) && <span style={{ color: day.checklist_pass ? C.sage : stageAccent, fontSize: 11 }}>✓</span>}
             </div>
             <span style={{ fontSize: 13.5 }}>{c.label}</span>
-          </div>
+          </button>
         ))}
         {day.checklist_pass !== true && (
           <button
             disabled={day.morning_plan !== true || !allChecked}
             onClick={completeChecklist}
             className="w-full rounded-lg py-2 text-sm font-medium mt-3"
-            style={{ background: allChecked ? C.goldDim : C.raised, color: allChecked ? C.text : C.textFaint }}
+            style={{ background: allChecked ? stageAccent : C.raised, color: allChecked ? "#071018" : C.textFaint, border: `1px solid ${allChecked ? stageAccent : C.hair}`, boxShadow: allChecked ? `0 8px 20px -14px ${stageAccent}` : "none" }}
           >
             取得本筆交易許可
           </button>
@@ -861,6 +937,27 @@ export default function PracticeTab({ ctx }) {
         </>
         )}
         </Card>
+        {day.successful_wait === true ? (
+          <div className="mt-2 rounded-xl px-3 py-3" style={{ background: C.sageDim, border: `1px solid rgba(107,154,126,0.28)` }}>
+            <div style={{ color: C.sage, fontSize: 12.5, fontWeight: 800 }}>等待任務已完成</div>
+            {day.successful_wait_reason?.label && (
+              <div className="mt-1.5" style={{ color: C.textDim, fontSize: 12.5, lineHeight: 1.55 }}>
+                {day.successful_wait_reason.label}
+                {day.successful_wait_reason.code === "other" && day.successful_wait_reason.note && (
+                  <div className="mt-1" style={{ color: C.textFaint }}>{day.successful_wait_reason.note}</div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : day.morning_plan === true &&
+          day.trades.length === 0 &&
+          day.checklist_pass !== true &&
+          !day.journal &&
+          day.stopLossMode !== true ? (
+          <button type="button" onClick={openSuccessfulWaitModal} className="mt-2 w-full px-2 py-2 text-xs" style={{ minHeight: 40, background: "transparent", color: C.textDim }}>
+            今日沒有策略機會｜完成等待任務
+          </button>
+        ) : null}
       </div>
 
       <div id="trade-practice" style={{ scrollMarginTop: "16px" }}>
@@ -912,7 +1009,7 @@ export default function PracticeTab({ ctx }) {
               className="flex-1 rounded-lg py-1.5 text-xs"
               style={{
                 background: accountType === type ? C.raised2 : C.raised,
-                border: `1px solid ${accountType === type ? C.gold : C.hair}`,
+                border: `1px solid ${accountType === type ? stageAccent : C.hair}`,
                 color: accountType === type ? C.text : C.textFaint,
               }}
             >
@@ -922,16 +1019,17 @@ export default function PracticeTab({ ctx }) {
         </div>}
 
         {!editingId && !isTradeFormOpen ? (
-          <div className="rounded-lg p-3" style={{ background: C.raised, border: `1px solid ${canOpenTrade ? C.goldDim : C.hair}` }}>
+          <div className="rounded-lg p-3" style={{ background: C.raised, border: `1px solid ${canOpenTrade ? stageAccent : C.hair}` }}>
             <button
               type="button"
               onClick={openTradeForm}
               aria-disabled={!canOpenTrade}
               className="w-full rounded-lg py-2.5 text-sm font-medium"
               style={{
-                background: canOpenTrade ? C.goldDim : C.raised2,
-                color: canOpenTrade ? C.text : C.textFaint,
+                background: canOpenTrade ? stageAccent : C.raised2,
+                color: canOpenTrade ? "#071018" : C.textFaint,
                 cursor: canOpenTrade ? "pointer" : "not-allowed",
+                boxShadow: canOpenTrade ? `0 8px 20px -14px ${stageAccent}` : "none",
               }}
             >
               {`執行第 ${nextTradeNumber} 筆交易`}
@@ -995,7 +1093,7 @@ export default function PracticeTab({ ctx }) {
         ) : (
           <>
             <div className="rounded-lg p-3 mb-3" style={{ background: "rgba(10,11,14,0.32)", border: `1px solid ${C.hair}` }}>
-            <div style={{ color: C.gold, fontSize: 11, fontWeight: 800, letterSpacing: 1 }} className="mb-2">交易設定</div>
+            <div style={{ color: stageAccent, fontSize: 11, fontWeight: 800, letterSpacing: 1 }} className="mb-2">交易設定</div>
             <div className="flex gap-2 mb-2">
               {["exam", "funded"].map((type) => (
                 <button
@@ -1005,7 +1103,7 @@ export default function PracticeTab({ ctx }) {
                   className="flex-1 rounded-lg py-1.5 text-xs"
                   style={{
                     background: accountType === type ? C.raised2 : C.raised,
-                    border: `1px solid ${accountType === type ? C.gold : C.hair}`,
+                    border: `1px solid ${accountType === type ? stageAccent : C.hair}`,
                     color: accountType === type ? C.text : C.textFaint,
                   }}
                 >
@@ -1024,7 +1122,7 @@ export default function PracticeTab({ ctx }) {
               <div style={{ color: C.textFaint, fontSize: 12, marginBottom: 6 }}>方向</div>
               <div className="grid grid-cols-2 gap-2">
                 {[{ value: "long", label: "多" }, { value: "short", label: "空" }].map((option) => (
-                  <button key={option.value} type="button" onClick={() => setDirection(option.value)} className="rounded-lg py-2 text-xs" style={{ background: direction === option.value ? C.raised2 : C.raised, border: `1px solid ${direction === option.value ? C.goldDim : C.hair}`, color: direction === option.value ? C.text : C.textFaint }}>
+                  <button key={option.value} type="button" onClick={() => setDirection(option.value)} className="rounded-lg py-2 text-xs" style={{ background: direction === option.value ? C.raised2 : C.raised, border: `1px solid ${direction === option.value ? stageAccent : C.hair}`, color: direction === option.value ? C.text : C.textFaint }}>
                     {option.label}
                   </button>
                 ))}
@@ -1033,7 +1131,7 @@ export default function PracticeTab({ ctx }) {
             </div>
 
             <div className="rounded-lg p-3 mb-3" style={{ background: "rgba(10,11,14,0.32)", border: `1px solid ${C.hair}` }}>
-            <div style={{ color: C.gold, fontSize: 11, fontWeight: 800, letterSpacing: 1 }} className="mb-2">執行品質</div>
+            <div style={{ color: stageAccent, fontSize: 11, fontWeight: 800, letterSpacing: 1 }} className="mb-2">執行品質</div>
             <input
               value={entryReason}
               onChange={(e) => setEntryReason(e.target.value)}
@@ -1058,7 +1156,7 @@ export default function PracticeTab({ ctx }) {
                       className="rounded-lg py-2 text-xs"
                       style={{
                         background: selected ? C.raised2 : C.raised,
-                        border: `1px solid ${selected ? C.goldDim : C.hair}`,
+                        border: `1px solid ${selected ? stageAccent : C.hair}`,
                         color: selected ? C.text : C.textFaint,
                       }}
                     >
@@ -1073,7 +1171,7 @@ export default function PracticeTab({ ctx }) {
             </div>
 
             <div className="rounded-lg p-3 mb-3" style={{ background: "rgba(10,11,14,0.32)", border: `1px solid ${C.hair}` }}>
-            <div style={{ color: C.gold, fontSize: 11, fontWeight: 800, letterSpacing: 1 }} className="mb-2">結果紀錄</div>
+            <div style={{ color: stageAccent, fontSize: 11, fontWeight: 800, letterSpacing: 1 }} className="mb-2">結果紀錄</div>
             <input
               value={rValue}
               onChange={(e) => setRValue(e.target.value)}
@@ -1148,7 +1246,7 @@ export default function PracticeTab({ ctx }) {
                   {t.edited_at && <span style={{ fontSize: 10, color: C.textFaint }}>已編輯</span>}
                 </div>
                 <div className="mt-1.5 flex items-center justify-between">
-                  <button type="button" onClick={() => setExpandedTradeDetails((details) => ({ ...details, [t.id]: !details[t.id] }))} className="text-xs" style={{ color: C.gold }}>
+                  <button type="button" onClick={() => setExpandedTradeDetails((details) => ({ ...details, [t.id]: !details[t.id] }))} className="text-xs" style={{ color: stageAccent }}>
                     {expandedTradeDetails[t.id] ? "收合詳情" : "查看詳情"}
                   </button>
                   <button onClick={() => startEdit(t)} style={{ fontSize: 11, color: C.textDim }}>編輯</button>
@@ -1196,7 +1294,7 @@ export default function PracticeTab({ ctx }) {
                   </span>
                 </div>
                 <div className="mt-1.5 flex items-center justify-between">
-                  <button type="button" onClick={() => setExpandedTradeDetails((details) => ({ ...details, [t.id]: !details[t.id] }))} className="text-xs" style={{ color: C.gold }}>
+                  <button type="button" onClick={() => setExpandedTradeDetails((details) => ({ ...details, [t.id]: !details[t.id] }))} className="text-xs" style={{ color: stageAccent }}>
                     {expandedTradeDetails[t.id] ? "收合詳情" : "查看詳情"}
                   </button>
                   <button onClick={() => startEdit(t)} style={{ fontSize: 11, color: C.textDim }}>編輯</button>
@@ -1256,7 +1354,6 @@ export default function PracticeTab({ ctx }) {
       <SectionLabel>其他修煉紀錄</SectionLabel>
       <div className="grid grid-cols-1 gap-2">
         {[
-          { id: "wait", label: "記錄成功等待" },
           { id: "temptation", label: "記錄抵抗誘惑" },
           { id: "violation", label: "誠實記錄違規" },
         ].map((item) => {
@@ -1268,34 +1365,17 @@ export default function PracticeTab({ ctx }) {
               onClick={() => setActiveExtraTraining(active ? null : item.id)}
               className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left"
               style={{
-                background: active ? "rgba(203,163,95,0.055)" : C.surface,
-                border: `1px solid ${active ? C.goldDim : C.hair}`,
+                background: active ? stageAccentSoft : C.surface,
+                border: `1px solid ${active ? stageAccent : C.hair}`,
                 color: active ? C.text : C.textDim,
               }}
             >
               <span style={{ fontSize: 12.5, fontWeight: 700 }}>{item.label}</span>
-              <span style={{ color: active ? C.gold : C.textFaint, fontSize: 13 }}>{active ? "−" : "+"}</span>
+              <span style={{ color: active ? stageAccent : C.textFaint, fontSize: 13 }}>{active ? "−" : "+"}</span>
             </button>
           );
         })}
       </div>
-
-      {activeExtraTraining === "wait" && (
-      <Card style={{ marginTop: 8, borderColor: C.hair, opacity: 0.9 }}>
-        <div style={{ fontSize: 12.5, color: C.textDim }} className="mb-3">
-          沒有交易也是一種完整的一天,只要你有意識地選擇等待。
-        </div>
-        {day.successful_wait ? (
-          <div className="rounded-lg px-3 py-2 text-xs" style={{ background: C.sageDim, border: `1px solid rgba(107,154,126,0.28)`, color: C.sage }}>
-            ✓ 成功等待已記錄
-          </div>
-        ) : (
-          <button onClick={logSuccessfulWait} className="w-full rounded-lg py-2 text-sm font-medium" style={{ background: C.sageDim, color: C.text }}>
-            記錄成功等待
-          </button>
-        )}
-      </Card>
-      )}
 
       {activeExtraTraining === "temptation" && (
       <Card style={{ marginTop: 8, borderColor: C.hair, opacity: 0.9 }}>

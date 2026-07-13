@@ -8,6 +8,8 @@ export default function ConfirmModal({
   onConfirm,
   confirmLabel = "確定記錄",
   cancelLabel = "取消",
+  confirmButtonClassName = "",
+  confirmButtonStyle,
 }) {
   return (
     <div
@@ -23,7 +25,11 @@ export default function ConfirmModal({
           <button onClick={onCancel} className="flex-1 rounded-lg py-2 text-sm" style={{ background: C.raised, color: C.textDim }}>
             {cancelLabel}
           </button>
-          <button onClick={onConfirm} className="flex-1 rounded-lg py-2 text-sm" style={{ background: C.ashDim, color: C.text }}>
+          <button
+            onClick={onConfirm}
+            className={`flex-1 rounded-lg py-2 text-sm ${confirmButtonClassName}`}
+            style={{ background: C.ashDim, color: C.text, ...confirmButtonStyle }}
+          >
             {confirmLabel}
           </button>
         </div>

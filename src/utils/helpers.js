@@ -95,6 +95,7 @@ export function defaultState() {
   const state = {
     identity: {
       name: "",
+      characterStage: "apprentice",
       totalExp: 0,
       integrity: 100,
       energy: 40,

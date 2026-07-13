@@ -156,15 +156,16 @@ export default function SystemTab({ ctx }) {
   const totalSuccessfulWaits = sessions.reduce((sum, session) => sum + (session.successful_wait ? 1 : 0), 0);
   const totalJournalDays = sessions.reduce((sum, session) => sum + (session.journal ? 1 : 0), 0);
   const unlockedIds = ctx.data.achievementsUnlocked || [];
-  const currentStage = [...TITLE_BANDS].reverse().find(([level]) => level <= ctx.lvl.level) || TITLE_BANDS[0];
-  const nextStage = TITLE_BANDS.find(([level]) => level > ctx.lvl.level);
+  const currentTitleBand =
+    [...TITLE_BANDS].reverse().find(([level]) => level <= ctx.lvl.level) || TITLE_BANDS[0];
+  const nextTitleBand = TITLE_BANDS.find(([level]) => level > ctx.lvl.level);
   const totalAchievementsCount = ACHIEVEMENTS.length;
   const totalTitlesCount = TITLE_BANDS.length;
   const unlockedTitlesCount = TITLE_BANDS.filter(([level]) => level <= ctx.lvl.level).length;
-  const nextAppearanceLevel = nextStage?.[0];
+  const nextTitleLevel = nextTitleBand?.[0];
 
   const character = {
-    title: currentStage[2],
+    title: currentTitleBand[2],
     level: ctx.lvl.level,
     integrity: ctx.data.identity.integrity,
   };
@@ -233,12 +234,12 @@ export default function SystemTab({ ctx }) {
             <Sparkles size={18} color={C.gold} className="mx-auto mb-1.5" aria-hidden="true" />
             <div style={{ color: C.textFaint, fontSize: 10.5 }}>里程碑</div>
             <div style={{ color: C.gold, fontFamily: FONT_MONO, fontSize: 15, fontWeight: 800, marginTop: 3 }}>
-              {nextAppearanceLevel ? `Lv.${nextAppearanceLevel}` : "已完成"}
+              {nextTitleLevel ? `Lv.${nextTitleLevel}` : "已完成"}
             </div>
           </div>
         </div>
         <div className="mt-3 pt-3 flex justify-between" style={{ borderTop: `1px solid ${C.hair}`, fontSize: 12 }}>
-          <span style={{ color: C.textFaint }}>目前階段：{character.title}</span>
+          <span style={{ color: C.textFaint }}>目前稱號：{character.title}</span>
         </div>
       </Card>
 

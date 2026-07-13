@@ -11,6 +11,7 @@ import {
 import { computeLevel } from "../utils/levels.js";
 import { ACHIEVEMENTS } from "../utils/constants.js";
 import { INITIAL_CHARACTER_STATS } from "../data/character.js";
+import { migrateCharacterStage } from "../config/characterStages.js";
 
 const DAILY_MAX_ENERGY = 40;
 
@@ -76,21 +77,25 @@ function restoreTodayFromBaseline(prev, date, baseline) {
   };
 }
 
-function migrateIdentity(identity = {}, today = todayStr()) {
-  const isToday = identity.energyDate === today;
-  const energy = isToday ? identity.energy ?? DAILY_MAX_ENERGY : DAILY_MAX_ENERGY;
+export function migrateIdentity(identity = {}, today = todayStr()) {
+  const sourceIdentity = identity && typeof identity === "object" ? identity : {};
+  const migratedStageIdentity = migrateCharacterStage(sourceIdentity);
+  const isToday = migratedStageIdentity.energyDate === today;
+  const energy = isToday
+    ? migratedStageIdentity.energy ?? DAILY_MAX_ENERGY
+    : DAILY_MAX_ENERGY;
 
   return {
-    ...identity,
-    name: identity.name ?? "執行者",
-    totalExp: identity.totalExp ?? 0,
-    integrity: identity.integrity ?? 100,
+    ...migratedStageIdentity,
+    name: migratedStageIdentity.name ?? "執行者",
+    totalExp: migratedStageIdentity.totalExp ?? 0,
+    integrity: migratedStageIdentity.integrity ?? 100,
     energy,
     maxEnergy: DAILY_MAX_ENERGY,
     energyDate: today,
     stats: {
       ...INITIAL_CHARACTER_STATS,
-      ...(identity.stats || {}),
+      ...(migratedStageIdentity.stats || {}),
     },
   };
 }

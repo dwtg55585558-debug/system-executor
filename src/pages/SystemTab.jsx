@@ -121,6 +121,9 @@ export default function SystemTab({ ctx }) {
   const previewActive = previewStageKey !== null;
   const eligibility = getStageEligibility(currentStageKey, ctx.lvl.level, metrics);
   const targetStage = eligibility.targetStage;
+  const advanceModalTargetStage = advanceModalTargetKey
+    ? CHARACTER_STAGES[advanceModalTargetKey]
+    : null;
   const canAdvance = Boolean(
     targetStage &&
     eligibility.eligible === true &&
@@ -326,11 +329,17 @@ export default function SystemTab({ ctx }) {
         </Card>
       )}
 
-      {advanceModalTargetKey && CHARACTER_STAGES[advanceModalTargetKey] && (
+      {advanceModalTargetStage && (
         <ConfirmModal
-          title={`確認晉階為「${CHARACTER_STAGES[advanceModalTargetKey].label}」`}
+          title={`確認晉階為「${advanceModalTargetStage.label}」`}
           desc={"晉階代表你已累積足夠的完整修煉與零違規紀錄。\n這不代表你已經掌控市場，而是你的執行穩定度進入下一階段。"}
           confirmLabel="完成晉階"
+          confirmButtonClassName="transition-[filter,transform] hover:brightness-110 active:translate-y-px active:brightness-90"
+          confirmButtonStyle={{
+            background: advanceModalTargetStage.identityAccent,
+            boxShadow: `0 0 18px ${advanceModalTargetStage.identityGlow}`,
+            color: "#081018",
+          }}
           cancelLabel="繼續修煉"
           onCancel={resetAdvanceFlow}
           onConfirm={completeAdvance}

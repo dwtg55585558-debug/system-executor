@@ -198,16 +198,14 @@ Journal renders the five-question daily journal and today's trading summary. It 
 
 ### `SystemTab`
 
-System shows identity and progression. It derives:
-
-- level and title display
-- EXP progress
-- integrity trend data
-- integrity explanation/recovery text
-- boss encounter/resistance stats
-- achievement wall state
-
-It also exposes reset progress through `onReset`, which is provided by `App`.
+System is the long-term cultivation growth center. Its ordered sections are the current
+identity, the five-stage cultivation track, next-stage eligibility, cultivation metrics,
+the collapsed achievement catalog, and collapsed system settings. It derives the stored
+character stage independently from an optional DEV-only visual preview, passes `ctx.today`
+to `computeCultivationMetrics` as `todayKey`, and uses the System 2A eligibility helpers
+for Level, closed-loop, and zero-violation requirements. Promotion is explicit, adjacent
+only, and changes only `identity.characterStage`; it never awards EXP or mutates history.
+The existing AI mentor and API-key storage remain inside the bottom settings section.
 
 ### `InsightTab`
 
@@ -327,7 +325,8 @@ Stats are calculated in multiple places:
 
 - achievement stats in `computeStats`
 - insight metrics in `InsightTab`
-- boss stats in `SystemTab`
+- cultivation metrics in `computeCultivationMetrics`, presented by `SystemTab`
+- boss stats in `InsightTab`
 - daily review summaries in `DayDetailModal`
 - home quest completion in `HomeTab`
 

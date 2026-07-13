@@ -11,7 +11,13 @@ import {
 import { computeLevel } from "../utils/levels.js";
 import { ACHIEVEMENTS } from "../utils/constants.js";
 import { INITIAL_CHARACTER_STATS } from "../data/character.js";
-import { migrateCharacterStage } from "../config/characterStages.js";
+import {
+  getNextCharacterStage,
+  getStageEligibility,
+  migrateCharacterStage,
+  resolveStoredCharacterStageKey,
+} from "../config/characterStages.js";
+import { computeCultivationMetrics } from "../utils/cultivationMetrics.js";
 
 const DAILY_MAX_ENERGY = 40;
 
@@ -114,9 +120,16 @@ export function useAppState(showToast) {
         const migrated = {
           ...parsed,
           identity: migrateIdentity(parsed.identity, today),
+          history: parsed.history && typeof parsed.history === "object" ? parsed.history : {},
+          achievementsUnlocked: Array.isArray(parsed.achievementsUnlocked)
+            ? parsed.achievementsUnlocked
+            : [],
           dailySnapshots: parsed.dailySnapshots || {},
         };
         Object.values(migrated.history || {}).forEach((s) => {
+          if (!Array.isArray(s.trades)) s.trades = [];
+          if (!Array.isArray(s.violations)) s.violations = [];
+          if (!Array.isArray(s.bossResists)) s.bossResists = [];
           (s.trades || []).forEach((t) => {
             if (!t.id) t.id = uid();
           });
@@ -244,6 +257,45 @@ export function useAppState(showToast) {
     return true;
   }, []);
 
+  const updateCharacterStage = useCallback(
+    (expectedCurrentStageKey, targetStageKey) => {
+      setData((prev) => {
+        const storedStageKey = resolveStoredCharacterStageKey(prev.identity);
+        const latestLevel = computeLevel(prev.identity?.totalExp || 0);
+        const latestMetrics = computeCultivationMetrics(prev.history || {}, {
+          todayKey: today,
+        });
+        const eligibility = getStageEligibility(
+          storedStageKey,
+          latestLevel.level,
+          latestMetrics
+        );
+        const nextStage = getNextCharacterStage(storedStageKey);
+
+        if (
+          storedStageKey !== expectedCurrentStageKey ||
+          !nextStage ||
+          nextStage.key !== targetStageKey ||
+          eligibility.eligible !== true ||
+          eligibility.targetStage?.key !== targetStageKey ||
+          nextStage.assetReady !== true ||
+          nextStage.unlockEnabled !== true
+        ) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          identity: {
+            ...prev.identity,
+            characterStage: targetStageKey,
+          },
+        };
+      });
+    },
+    [today]
+  );
+
   const spendEnergy = useCallback(
     (amount) => {
       setData((prev) => {
@@ -329,6 +381,7 @@ export function useAppState(showToast) {
     addReward,
     adjustIntegrity,
     updateIdentityName,
+    updateCharacterStage,
     spendEnergy,
     updateDay,
     updateHistoryDay,

@@ -34,6 +34,10 @@ export const CHARACTER_STAGES = {
     unlockEnabled: true,
     idleImage: apprenticeIdle,
     activatedImage: apprenticeActivated,
+    identityAccent: "#8FA2B5",
+    identityAccentDim: "rgba(143, 162, 181, 0.16)",
+    identityAccentBorder: "rgba(143, 162, 181, 0.42)",
+    identityGlow: "rgba(143, 162, 181, 0.14)",
     accent: "#8295aa",
     accentDim: "rgba(91, 111, 132, 0.42)",
     ...SHARED_IDLE_TOKENS,
@@ -53,6 +57,10 @@ export const CHARACTER_STAGES = {
     unlockEnabled: true,
     idleImage: cultivatorIdle,
     activatedImage: cultivatorActivated,
+    identityAccent: "#6F96C8",
+    identityAccentDim: "rgba(111, 150, 200, 0.17)",
+    identityAccentBorder: "rgba(111, 150, 200, 0.44)",
+    identityGlow: "rgba(111, 150, 200, 0.15)",
     accent: "#7fa6c8",
     accentDim: "rgba(55, 91, 124, 0.48)",
     ...SHARED_IDLE_TOKENS,
@@ -72,6 +80,10 @@ export const CHARACTER_STAGES = {
     unlockEnabled: false,
     idleImage: null,
     activatedImage: null,
+    identityAccent: "#5FAF92",
+    identityAccentDim: "rgba(95, 175, 146, 0.17)",
+    identityAccentBorder: "rgba(95, 175, 146, 0.44)",
+    identityGlow: "rgba(95, 175, 146, 0.15)",
     accent: "#cba35f",
     accentDim: "rgba(139, 103, 50, 0.46)",
     ...SHARED_IDLE_TOKENS,
@@ -91,6 +103,10 @@ export const CHARACTER_STAGES = {
     unlockEnabled: false,
     idleImage: null,
     activatedImage: null,
+    identityAccent: "#9B7FD1",
+    identityAccentDim: "rgba(155, 127, 209, 0.17)",
+    identityAccentBorder: "rgba(155, 127, 209, 0.44)",
+    identityGlow: "rgba(155, 127, 209, 0.15)",
     accent: "#9a83c9",
     accentDim: "rgba(103, 78, 151, 0.46)",
     ...SHARED_IDLE_TOKENS,
@@ -110,6 +126,10 @@ export const CHARACTER_STAGES = {
     unlockEnabled: false,
     idleImage: null,
     activatedImage: null,
+    identityAccent: "#D2AE68",
+    identityAccentDim: "rgba(210, 174, 104, 0.17)",
+    identityAccentBorder: "rgba(210, 174, 104, 0.46)",
+    identityGlow: "rgba(210, 174, 104, 0.16)",
     accent: "#c7b27a",
     accentDim: "rgba(129, 107, 58, 0.46)",
     ...SHARED_IDLE_TOKENS,
@@ -154,7 +174,7 @@ export function migrateCharacterStage(identity = {}) {
   };
 }
 
-function getDevStageOverride(options = {}) {
+export function getCharacterStagePreviewKey(options = {}) {
   const isDev = options.isDev ?? Boolean(import.meta.env?.DEV);
   if (!isDev) return null;
 
@@ -165,9 +185,18 @@ function getDevStageOverride(options = {}) {
   return isValidCharacterStageKey(override) ? override : null;
 }
 
-export function resolveCharacterStage(identity = {}, options = {}) {
-  const key = getDevStageOverride(options) || resolveStoredCharacterStageKey(identity);
+export function resolveStoredCharacterStage(identity = {}) {
+  const key = resolveStoredCharacterStageKey(identity);
   return CHARACTER_STAGES[key] || CHARACTER_STAGES.apprentice;
+}
+
+export function resolvePreviewCharacterStage(identity = {}, options = {}) {
+  const key = getCharacterStagePreviewKey(options) || resolveStoredCharacterStageKey(identity);
+  return CHARACTER_STAGES[key] || CHARACTER_STAGES.apprentice;
+}
+
+export function resolveCharacterStage(identity = {}) {
+  return resolveStoredCharacterStage(identity);
 }
 
 export function getStageRequirements(stageKey) {

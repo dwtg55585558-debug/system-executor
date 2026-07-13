@@ -492,39 +492,44 @@ File:
 
 Purpose:
 
-- Show identity progression, integrity, bosses, achievements, and reset control.
+- Show long-term cultivation identity, stage progression, eligibility, discipline records,
+  achievements, and system settings. It does not repeat today's tasks or CTA.
 
 Inputs:
 
 - `ctx.data`
+- `ctx.today`
 - `ctx.lvl`
-- `onReset`
+- `ctx.stats`
+- `ctx.updateCharacterStage`
 
 Features:
 
-- Identity ring.
-- EXP progress to next level.
-- System Integrity value.
-- Title growth path.
-- Integrity trend chart.
-- Integrity reason/recovery messaging.
-- Boss stats.
-- Achievement wall.
-- Reset progress button.
+- Current cultivation identity card with the stage idle asset, level title, and Level EXP.
+- Five-stage cultivation track based on `CHARACTER_STAGES`.
+- Next-stage Level, complete closed-loop, and zero-violation closed-loop eligibility.
+- Explicit adjacent-stage promotion confirmation; unavailable stages have no promotion CTA.
+- Four primary and four secondary cultivation metrics.
+- Collapsed achievement catalog using the existing achievement data and categories.
+- Collapsed system settings containing the existing AI mentor and API-key workflow.
 
 Derived Data:
 
-- integrity chart from `data.integrityLog`
-- boss encountered/defeated counts from history
-- journal gap via `journalGapDays`
-- achievement unlock state from `data.achievementsUnlocked`
+- `computeCultivationMetrics(data.history, { todayKey: ctx.today })`
+- stored stage via `resolveStoredCharacterStageKey(data.identity)`
+- optional identity-card-only DEV preview via `resolvePreviewCharacterStage(data.identity)`
+- eligibility via `getStageEligibility(storedStageKey, ctx.lvl.level, metrics)`
+- achievement unlock state from a safe `data.achievementsUnlocked` array
 
 Components:
 
-- `IdentityRing`
+- `SystemIdentityCard`
+- `CultivationStageProgress`
+- `StageEligibilityCard`
+- `CultivationMetricsGrid`
 - `Card`
 - `SectionLabel`
-- Recharts line chart
+- `AIMentorPanel`
 
 ## Insight
 
@@ -724,7 +729,8 @@ Feature-specific components:
 | Violation penalty | `PracticeTab` |
 | Journal reward | `JournalTab` |
 | Decision quality score | `InsightTab` |
-| Boss stats | `SystemTab`, `InsightTab` |
+| Cultivation growth metrics | `computeCultivationMetrics`, `SystemTab` |
+| Boss stats | `InsightTab` |
 
 ## Recommended Feature Ownership
 

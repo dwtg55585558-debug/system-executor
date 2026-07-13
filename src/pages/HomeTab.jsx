@@ -11,7 +11,7 @@ import Card from "../components/Card.jsx";
 import CultivatorNameModal from "../components/CultivatorNameModal.jsx";
 import CharacterStatusCard from "../components/CharacterStatusCard.jsx";
 import SystemMissionPanel from "../components/SystemMissionPanel.jsx";
-import { resolveCharacterStage } from "../config/characterStages.js";
+import { resolveStoredCharacterStage } from "../config/characterStages.js";
 import { C, FONT_DISPLAY, FONT_MONO } from "../styles/theme.js";
 import { QUOTES, JOURNAL_GAP_WARNING } from "../utils/constants.js";
 import { journalGapDays } from "../utils/helpers.js";
@@ -67,7 +67,7 @@ export default function HomeTab({ ctx }) {
   const stopLossMode = !!day.stopLossMode;
   const gapDays = journalGapDays(data.history);
   const hasViolation = (day.violations?.length || 0) > 0;
-  const stage = resolveCharacterStage(data.identity);
+  const stage = resolveStoredCharacterStage(data.identity);
   const nextTradeNumber = day.trades.length + 1;
   let nextAction;
   if (day.journal) nextAction = { status: "今日修煉完成", title: "今日任務已結算", description: "今日的成果由執行品質決定，不由盈虧決定。", cta: "查看今日修煉紀錄", tab: "journal", target: "decision-journal", complete: true };
@@ -183,7 +183,7 @@ export default function HomeTab({ ctx }) {
 
   return (
     <div>
-      <div style={{ opacity: handoffSettled ? 1 : .86, transition: "opacity 240ms ease", filter: handoffGlow ? "drop-shadow(0 0 10px rgba(127,166,200,.18))" : "none" }}>
+      <div style={{ opacity: handoffSettled ? 1 : .86, transition: "opacity 240ms ease", filter: handoffGlow ? `drop-shadow(0 0 10px ${stage.identityGlow})` : "none" }}>
         <CharacterStatusCard stage={stage} activated={!!day.morning_plan} risk={stopLossMode || hasViolation} level={lvl.level} name={cultivatorName} date={ctx.today} mission={nextAction} onEditName={() => setEditingName(true)} onPrimary={() => navigateTo(nextAction.tab, nextAction.target)} onSecondary={() => nextAction.secondary.action === "successful-wait" ? openSuccessfulWaitModal() : navigateTo(nextAction.secondary.tab, nextAction.secondary.target)} />
       </div>
       <SystemMissionPanel nodes={missionNodes} accent={stage.accent} />

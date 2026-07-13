@@ -5,7 +5,7 @@ import ToggleRow from "../components/ToggleRow.jsx";
 import ConfirmModal from "../components/ConfirmModal.jsx";
 import SystemCheckModal from "../components/SystemCheckModal.jsx";
 import executorApprentice from "../assets/characters/apprentice-idle.jpeg";
-import { resolveCharacterStage } from "../config/characterStages.js";
+import { resolveStoredCharacterStage } from "../config/characterStages.js";
 import { C, FONT_DISPLAY } from "../styles/theme.js";
 import {
   CHECKLIST_ITEMS,
@@ -181,7 +181,7 @@ export default function PracticeTab({ ctx }) {
       : null);
   const identityDisplayName = data.identity.name?.trim() || "執行者";
   const shouldDisplayIdentityName = !/^\d+$/.test(identityDisplayName);
-  const stage = resolveCharacterStage(data.identity);
+  const stage = resolveStoredCharacterStage(data.identity);
   const stageAccent = stage.accent;
   const stageAccentSoft = `color-mix(in srgb, ${stageAccent} 8%, transparent)`;
   const stageAccentBorder = `color-mix(in srgb, ${stageAccent} 62%, transparent)`;

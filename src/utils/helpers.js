@@ -222,7 +222,8 @@ export function computeStats(data) {
   for (const d of dates) {
     const s = data.history[d];
     if (s.successful_wait) totalSuccessfulWaits++;
-    totalFollowedTrades += s.trades.filter((t) => t.followed_checklist).length;
+    const trades = Array.isArray(s.trades) ? s.trades : [];
+    totalFollowedTrades += trades.filter((t) => t.followed_checklist).length;
   }
   const rev = [...dates].reverse();
   const dayComplete = (s) =>
@@ -231,7 +232,7 @@ export function computeStats(data) {
     s.reading &&
     s.checklist_pass &&
     !!s.journal &&
-    (s.successful_wait || s.trades.some((t) => t.followed_checklist));
+    (s.successful_wait || (Array.isArray(s.trades) ? s.trades : []).some((t) => t.followed_checklist));
   let journalStreak = 0,
     noViolationStreak = 0,
     questStreak = 0;
@@ -240,7 +241,7 @@ export function computeStats(data) {
     else break;
   }
   for (const d of rev) {
-    if (data.history[d].violations.length === 0) noViolationStreak++;
+    if ((Array.isArray(data.history[d].violations) ? data.history[d].violations : []).length === 0) noViolationStreak++;
     else break;
   }
   for (const d of rev) {

@@ -16,7 +16,7 @@ import JournalTab from "./pages/JournalTab.jsx";
 import SystemTab from "./pages/SystemTab.jsx";
 import InsightTab from "./pages/InsightTab.jsx";
 import { C, FONT_BODY } from "./styles/theme.js";
-import { resolveCharacterStage } from "./config/characterStages.js";
+import { resolveStoredCharacterStage } from "./config/characterStages.js";
 
 export default function App() {
   const [tab, setTab] = useState("home");
@@ -38,6 +38,7 @@ export default function App() {
     addReward,
     adjustIntegrity,
     updateIdentityName,
+    updateCharacterStage,
     spendEnergy,
     updateDay,
     updateHistoryDay,
@@ -60,7 +61,7 @@ export default function App() {
     );
   }
 
-  const stage = resolveCharacterStage(data.identity);
+  const stage = resolveStoredCharacterStage(data.identity);
   const canCompleteSuccessfulWait =
     day.morning_plan === true &&
     day.trades.length === 0 &&
@@ -112,6 +113,7 @@ export default function App() {
     navigationTarget,
     setNavigationTarget,
     updateIdentityName,
+    updateCharacterStage,
     setBossCard,
     setReviewDate,
     updateHistoryDay,
